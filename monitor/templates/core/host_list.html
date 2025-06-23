@@ -4,13 +4,34 @@
 {% block title %}Список серверов{% endblock %}
 
 {% block content %}
-<div class="row row-cols-1 row-cols-md-3 g-4">
-  {% for host in hosts %}
-    {% include "core/host_card.html" %}
-  {% empty %}
-    <div class="col">
-      <p>Нет доступных серверов</p>
+{% for host in hosts %}
+  {% include "core/host_card.html" with host=host %}
+    <div class="col" id="host-{{ host.id }}">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">{{ host.name }}</h5>
+          <p class="card-text">{{ host.host }}:{{ host.port }}</p>
+          <pre class="docker-status">Загрузка...</pre>
+        </div>
+      </div>
+
+      <script>
+        const socket = new WebSocket(`ws://${window.location.host}/ws/core/{{ host.id }}/`);
+
+        socket.onmessage = function(event) {
+          const data = JSON.parse(event.data);
+          const statusEl = document.querySelector('#host-{{ host.id }} .docker-status');
+          if (data.output) {
+            statusEl.textContent = data.output;
+          } else if (data.error) {
+            statusEl.textContent = "Ошибка: " + data.error;
+          }
+        };
+
+        socket.onerror = function(event) {
+          console.error("WebSocket error:", event);
+        };
+      </script>
     </div>
-  {% endfor %}
-</div>
+{% endfor %}
 {% endblock %}

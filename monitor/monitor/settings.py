@@ -1,4 +1,7 @@
+from dotenv import load_dotenv
 from pathlib import Path
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -7,7 +10,6 @@ SECRET_KEY = 'django-insecure-tnfh*x2+mda!ntqxyx1x-+s-te#$r_15n(@8#3h3-y#jq3!ua6
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -55,7 +57,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'monitor.wsgi.application'
-
 ASGI_APPLICATION = 'monitor.asgi.application'
 
 CHANNEL_LAYERS = {
