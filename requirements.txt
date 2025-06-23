@@ -1,4 +1,4 @@
-Django==5.2.3
+Django==4.2.23
 django_bootstrap5 == 25.1
 channels==4.2.2
 channels_redis==4.2.1
