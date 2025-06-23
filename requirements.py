@@ -1,0 +1,6 @@
+Django==5.2.3
+django_bootstrap5 == 25.1
+channels==4.2.2
+channels_redis==4.2.1
+docker==7.1.0
+redis==6.2.0
