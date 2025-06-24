@@ -41,12 +41,14 @@ class MonitorConsumer(AsyncWebsocketConsumer):
     async def monitor_loop(self, ssh_host):
         while self.is_running:
             try:
-                output = await self.get_docker_compose_status(
+                result = await self.get_docker_compose_status(
                     ssh_host,
                     username=os.getenv('SSH_USERNAME'),
                     password=os.getenv('SSH_PASSWORD')
                 )
-                await self.send(json.dumps({'output': output}))
+                await self.send(json.dumps({
+                    'config_status': result['config_status']
+                }))
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -72,10 +74,96 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 port=ssh_host.port,
                 username=username,
                 password=password,
-                known_hosts=None, #Указать, где лежат ключи или отключить проверку ключа
-                connect_timeout=10  # таймаут подключения
+                known_hosts=None,
+                connect_timeout=10
             ) as conn:
-                result = await conn.run('docker compose ls', check=True)
+                # Получаем только информацию о конфигурации
+                compose_ls = await conn.run('docker compose ls --format json', check=False)
+                
+                if compose_ls.stderr:
+                    return {
+                        'error': f"Ошибка при получении списка проектов: {compose_ls.stderr}",
+                        'current_config': None,
+                        'config_status': None
+                    }
+                
+                try:
+                    projects = json.loads(compose_ls.stdout)
+                    common_project = next((p for p in projects if p['Name'] == 'common'), None)
+                    
+                    if not common_project:
+                        return {
+                            'current_config': None,
+                            'config_status': "Проект common не найден"
+                        }
+                    
+                    return {
+                        'current_config': common_project['ConfigFiles'],
+                        'config_status': self.check_configuration(common_project['ConfigFiles'], ssh_host)
+                    }
+                    
+                except json.JSONDecodeError:
+                    return {
+                        'error': "Не удалось разобрать вывод docker compose",
+                        'current_config': None,
+                        'config_status': None
+                    }
+                    
+        except Exception as e:
+            return {
+                'error': f"Ошибка подключения: {str(e)}",
+                'current_config': None,
+                'config_status': None
+            }
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        if data.get('action') == 'toggle_mongo':
+            ssh_host = await self.get_ssh_host()
+            if ssh_host is None:
+                await self.send(json.dumps({'error': 'SSH host not found'}))
+                return
+        
+            try:
+                result = await self.toggle_mongo(
+                    ssh_host,
+                    username=os.getenv('SSH_USERNAME'),
+                    password=os.getenv('SSH_PASSWORD')
+                )
+                await self.send(json.dumps({'toggle_result': result}))
+            except Exception as e:
+                await self.send(json.dumps({'error': f'Toggle failed: {str(e)}'}))
+    
+    def check_configuration(self, config_files, ssh_host):
+        if not config_files:
+            return "Конфигурация не определена"
+        
+        for config_file in config_files.split(','):
+            filename = os.path.basename(config_file.strip())
+
+            if ssh_host.docker_base and ssh_host.docker_base == filename:
+                return "Подключена тестовая Монго"
+
+            if ssh_host.docker_prod and ssh_host.docker_prod == filename:
+                return "Подключена продакшен Монго"
+        return f"Используется другая конфигурация: {os.path.basename(config_files.split(',')[0].strip())}"
+
+    async def toggle_mongo(self, ssh_host, username, password):
+        try:
+            async with asyncssh.connect(
+                host=ssh_host.host,
+                port=ssh_host.port,
+                username=username,
+                password=password,
+                known_hosts=None,
+                connect_timeout=10
+            ) as conn:
+                # Выполняем переключение
+                result = await conn.run('/usr/local/bin/toggle-mongo', check=False)
+
+                if result.stderr:
+                    raise Exception(result.stderr)
+
                 return result.stdout
         except Exception as e:
-            raise Exception(f"SSH error: {str(e)}")
+            raise Exception(f"Toggle error: {str(e)}")
