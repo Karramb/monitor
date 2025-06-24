@@ -4,34 +4,43 @@
 {% block title %}Список серверов{% endblock %}
 
 {% block content %}
-{% for host in hosts %}
-  {% include "core/host_card.html" with host=host %}
-    <div class="col" id="host-{{ host.id }}">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">{{ host.name }}</h5>
-          <p class="card-text">{{ host.host }}:{{ host.port }}</p>
-          <pre class="docker-status">Загрузка...</pre>
+  <div id="servers">
+    {% for host in hosts %}
+      <div class="col server-card" id="host-{{ host.id }}" data-host-id="{{ host.id }}">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">{{ host.name }}</h5>
+            <p class="card-text">{{ host.host }}:{{ host.port }}</p>
+            <pre class="docker-status">Загрузка...</pre>
+          </div>
         </div>
       </div>
+    {% endfor %}
+  </div>
+{% endblock %}
 
-      <script>
-        const socket = new WebSocket(`ws://${window.location.host}/ws/core/{{ host.id }}/`);
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.server-card').forEach(function(card) {
+      const hostId = card.dataset.hostId;
+      const statusEl = card.querySelector('.docker-status');
+      const socket = new WebSocket(`ws://${window.location.host}/ws/core/${hostId}/`);
 
-        socket.onmessage = function(event) {
-          const data = JSON.parse(event.data);
-          const statusEl = document.querySelector('#host-{{ host.id }} .docker-status');
-          if (data.output) {
-            statusEl.textContent = data.output;
-          } else if (data.error) {
-            statusEl.textContent = "Ошибка: " + data.error;
-          }
-        };
+      socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.output) {
+          statusEl.textContent = data.output;
+        } else if (data.error) {
+          statusEl.textContent = "Ошибка: " + data.error;
+        }
+      };
 
-        socket.onerror = function(event) {
-          console.error("WebSocket error:", event);
-        };
-      </script>
-    </div>
-{% endfor %}
+      socket.onerror = function(event) {
+        console.error("WebSocket error for host ID", hostId, event);
+        statusEl.textContent = "Ошибка соединения";
+      };
+    });
+  });
+</script>
 {% endblock %}

@@ -1,14 +1,14 @@
 {% load static %}
 <header>
-  <nav class="navbar navbar-light" style="background-color: #EED9C4">
+  <nav class="navbar navbar-light" style="background-color: lightskyblue">
     <div class="container">
       <a class="navbar-brand" href="{% url 'core:host-list' %}">
       </a>
       {% with request.resolver_match.view_name as view_name %}
-        <ul class="nav  nav-pills">
+        <ul class="nav nav-pills">
           <li class="nav-item">
             <a class="nav-link {% if view_name == 'core:host-list' %} text-secondary {% endif %}" href="{% url 'core:host-list' %}">
-              О проекте
+              Пусто
             </a>
           </li>
             <div class="btn-group" role="group" aria-label="Basic outlined example">
