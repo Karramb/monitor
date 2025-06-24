@@ -10,10 +10,12 @@
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">{{ host.name }}</h5>
+        {% if host.button_change_base %}
         <button class="btn btn-sm btn-outline-primary toggle-btn" 
                 data-host-id="{{ host.id }}">
           Переключить базу
         </button>
+        {% endif %}
       </div>
       <div class="card-body">
         <div class="config-status mb-3 p-2 rounded text-center">

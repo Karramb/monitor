@@ -118,21 +118,22 @@ class MonitorConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        if data.get('action') == 'toggle_mongo':
-            ssh_host = await self.get_ssh_host()
-            if ssh_host is None:
-                await self.send(json.dumps({'error': 'SSH host not found'}))
-                return
-        
-            try:
-                result = await self.toggle_mongo(
-                    ssh_host,
-                    username=os.getenv('SSH_USERNAME'),
-                    password=os.getenv('SSH_PASSWORD')
-                )
-                await self.send(json.dumps({'toggle_result': result}))
-            except Exception as e:
-                await self.send(json.dumps({'error': f'Toggle failed: {str(e)}'}))
+        for script_name in ['toggle_mongo', 'restore-backup']:
+            if data.get('action') == script_name:
+                ssh_host = await self.get_ssh_host()
+                if ssh_host is None:
+                    await self.send(json.dumps({'error': 'SSH host not found'}))
+                    return
+            
+                try:
+                    result = await self.toggle_mongo(
+                        ssh_host,
+                        username=os.getenv('SSH_USERNAME'),
+                        password=os.getenv('SSH_PASSWORD')
+                    )
+                    await self.send(json.dumps({script_name: result}))
+                except Exception as e:
+                    await self.send(json.dumps({'error': f'Toggle failed: {str(e)}'}))
     
     def check_configuration(self, config_files, ssh_host):
         if not config_files:
@@ -158,12 +159,29 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
-                # Выполняем переключение
                 result = await conn.run('/usr/local/bin/toggle-mongo', check=False)
 
                 if result.stderr:
                     raise Exception(result.stderr)
 
+                return result.stdout
+        except Exception as e:
+            raise Exception(f"Toggle error: {str(e)}")
+
+    async def restore_backup(self, ssh_host, username, password):
+        try:
+            async with asyncssh.connect(
+                host=ssh_host.host,
+                port=ssh_host.port,
+                username=username,
+                password=password,
+                known_hosts=None,
+                connect_timeout=10
+            ) as conn:
+                result = await conn.run('/usr/local/bin/restore-backup', check=False)
+
+                if result.stderr:
+                    raise Exception(result.stderr)
                 return result.stdout
         except Exception as e:
             raise Exception(f"Toggle error: {str(e)}")
