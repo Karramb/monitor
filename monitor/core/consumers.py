@@ -5,6 +5,7 @@ import os
 import traceback
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+
 from core.models import SSHHost
 
 
@@ -19,7 +20,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
         self.host_id = self.scope['url_route']['kwargs']['host_id']
         self.is_running = True
         await self.accept()
-        
+
         ssh_host = await self.get_ssh_host()
         if ssh_host is None:
             await self.send(json.dumps({'error': 'SSH host not found'}))
@@ -55,7 +56,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 await self.send(json.dumps({'error': f'Internal error: {str(e)}'}))
                 print("❌ Exception in monitor_loop:")
                 traceback.print_exc()
-            
+
             try:
                 await asyncio.sleep(5)  # обновлять каждые 5 секунд
             except asyncio.CancelledError:
@@ -79,36 +80,36 @@ class MonitorConsumer(AsyncWebsocketConsumer):
             ) as conn:
                 # Получаем только информацию о конфигурации
                 compose_ls = await conn.run('docker compose ls --format json', check=False)
-                
+
                 if compose_ls.stderr:
                     return {
                         'error': f"Ошибка при получении списка проектов: {compose_ls.stderr}",
                         'current_config': None,
                         'config_status': None
                     }
-                
+
                 try:
                     projects = json.loads(compose_ls.stdout)
                     common_project = next((p for p in projects if p['Name'] == 'common'), None)
-                    
+
                     if not common_project:
                         return {
                             'current_config': None,
                             'config_status': "Проект common не найден"
                         }
-                    
+
                     return {
                         'current_config': common_project['ConfigFiles'],
                         'config_status': self.check_configuration(common_project['ConfigFiles'], ssh_host)
                     }
-                    
+
                 except json.JSONDecodeError:
                     return {
                         'error': "Не удалось разобрать вывод docker compose",
                         'current_config': None,
                         'config_status': None
                     }
-                    
+
         except Exception as e:
             return {
                 'error': f"Ошибка подключения: {str(e)}",
@@ -118,27 +119,31 @@ class MonitorConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         data = json.loads(text_data)
-        for script_name in ['toggle_mongo', 'restore-backup']:
-            if data.get('action') == script_name:
-                ssh_host = await self.get_ssh_host()
-                if ssh_host is None:
-                    await self.send(json.dumps({'error': 'SSH host not found'}))
-                    return
-            
-                try:
-                    result = await self.toggle_mongo(
-                        ssh_host,
-                        username=os.getenv('SSH_USERNAME'),
-                        password=os.getenv('SSH_PASSWORD')
-                    )
-                    await self.send(json.dumps({script_name: result}))
-                except Exception as e:
-                    await self.send(json.dumps({'error': f'Toggle failed: {str(e)}'}))
-    
+        ssh_host = await self.get_ssh_host()
+        if ssh_host is None:
+            await self.send(json.dumps({'error': 'SSH host not found'}))
+            return
+
+        try:
+            if data.get('action') == 'toggle_mongo':
+                await self.toggle_mongo(
+                    ssh_host,
+                    username=os.getenv('SSH_USERNAME'),
+                    password=os.getenv('SSH_PASSWORD')
+                )
+            elif data.get('action') == 'restore_backup':
+                await self.restore_backup(
+                    ssh_host,
+                    username=os.getenv('SSH_USERNAME'),
+                    password=os.getenv('SSH_PASSWORD')
+                )
+        except Exception as e:
+            print(f"Error in receive: {str(e)}")
+
     def check_configuration(self, config_files, ssh_host):
         if not config_files:
             return "Конфигурация не определена"
-        
+
         for config_file in config_files.split(','):
             filename = os.path.basename(config_file.strip())
 
@@ -146,7 +151,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 return "Подключена тестовая Монго"
 
             if ssh_host.docker_prod and ssh_host.docker_prod == filename:
-                return "Подключена продакшен Монго"
+                return "Подключена продакшн Монго"
         return f"Используется другая конфигурация: {os.path.basename(config_files.split(',')[0].strip())}"
 
     async def toggle_mongo(self, ssh_host, username, password):
@@ -159,14 +164,30 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
+                await self.send(json.dumps({
+                    'action': 'toggle_started',
+                    'message': 'Переключаем базу'
+                }))
+
                 result = await conn.run('/usr/local/bin/toggle-mongo', check=False)
 
-                if result.stderr:
-                    raise Exception(result.stderr)
+                if result.exit_status != 0:
+                    await self.send(json.dumps({
+                        'action': 'toggle_failed',
+                        'error': result.stderr or "Toggle failed"
+                    }))
+                    return
 
-                return result.stdout
+                await self.send(json.dumps({
+                    'action': 'toggle_completed',
+                    'result': result.stdout
+                }))
+
         except Exception as e:
-            raise Exception(f"Toggle error: {str(e)}")
+            await self.send(json.dumps({
+                'action': 'toggle_failed',
+                'error': f"Ошибка подключения: {str(e)}"
+            }))
 
     async def restore_backup(self, ssh_host, username, password):
         try:
@@ -178,10 +199,20 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
+                await self.send(json.dumps({
+                    'action': 'restore_started',
+                    'message': 'Начато восстановление дампа PG'
+                }))
+
                 result = await conn.run('/usr/local/bin/restore-backup', check=False)
 
-                if result.stderr:
-                    raise Exception(result.stderr)
-                return result.stdout
+                if result.exit_status != 0:
+                    raise Exception(result.stderr or "Restore failed")
+
+                await self.send(json.dumps({
+                    'action': 'restore_completed',
+                    'result': result.stdout
+                }))
+
         except Exception as e:
             raise Exception(f"Toggle error: {str(e)}")
