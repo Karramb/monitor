@@ -1,6 +1,7 @@
 import asyncssh
 import json
 import os
+import traceback
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from core.models import SSHHost
@@ -15,6 +16,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
         ssh_host = await self.get_ssh_host()
         if ssh_host is None:
             await self.send(json.dumps({'error': 'SSH host not found'}))
+            await self.close()
             return
 
         try:
@@ -25,7 +27,10 @@ class MonitorConsumer(AsyncWebsocketConsumer):
             )
             await self.send(json.dumps({'output': output}))
         except Exception as e:
-            await self.send(json.dumps({'error': str(e)}))
+            await self.send(json.dumps({'error': f'Internal error: {str(e)}'}))
+            print("❌ Exception in WebSocket connect():")
+            traceback.print_exc()
+            await self.close()
 
     async def disconnect(self, close_code):
         pass
@@ -44,5 +49,5 @@ class MonitorConsumer(AsyncWebsocketConsumer):
             password=password,
             known_hosts=None  # отключаем проверку known_hosts
         ) as conn:
-            result = await conn.run('docker compose ps', check=True)
+            result = await conn.run('docker compose ls', check=True)
             return result.stdout
