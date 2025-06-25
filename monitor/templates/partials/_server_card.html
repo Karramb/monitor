@@ -1,0 +1,31 @@
+<div class="col-md-6 col-lg-4 mb-4 server-card" id="host-{{ host.id }}" data-host-id="{{ host.id }}">
+  <div class="card h-100">
+    <div class="card-header text-center">
+      <h5 class="card-title mb-0">{{ host.name }}</h5>
+    </div>
+
+    <div class="card-body py-2 text-center" style="position: relative;">
+      <div class="btn-group">
+        {% if host.button_change_base %}
+        <button class="btn btn-sm btn-outline-primary toggle-btn" data-host-id="{{ host.id }}">
+          Переключить базу
+        </button>
+        {% endif %}
+        {% if host.button_dump_pg %}
+        <button class="btn btn-sm btn-outline-success restore-btn" data-host-id="{{ host.id }}">
+          Накатить дамп PG
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-footer bg-transparent">
+      <div class="config-status text-center p-2 rounded">
+        <div class="spinner-border spinner-border-sm" role="status">
+          <span class="visually-hidden">Загрузка...</span>
+        </div>
+        Проверка конфигурации...
+      </div>
+    </div>
+  </div>
+</div>
