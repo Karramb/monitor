@@ -78,12 +78,14 @@ document.addEventListener("DOMContentLoaded", function() {
       // Обработка завершения операций
       if (data.action === 'toggle_completed') {
         hideGlobalSpinner();
+        toggleBtn.disabled = false;
         showAlert('success', 'База успешно переключена');
         return;
       }
       
       if (data.action === 'restore_completed') {
         hideGlobalSpinner();
+        restoreBtn.disabled = false;
         showAlert('success', 'Дам PG успешно восстановлен');
         return;
       }
@@ -91,12 +93,14 @@ document.addEventListener("DOMContentLoaded", function() {
       // Обработка ошибок
       if (data.action === 'toggle_failed') {
         hideGlobalSpinner();
+        toggleBtn.disabled = false;
         showAlert('danger', `Ошибка переключения: ${data.error}`);
         return;
       }
       
       if (data.action === 'restore_failed') {
         hideGlobalSpinner();
+        restoreBtn.disabled = false;
         showAlert('danger', `Ошибка восстановления: ${data.error}`);
         return;
       }
