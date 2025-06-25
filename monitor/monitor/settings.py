@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['172.20.0.104', '*']
 
 
 AUTH_USER_MODEL = 'users.ArkanUser'
