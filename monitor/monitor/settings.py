@@ -144,4 +144,4 @@ class DebugHostMiddleware:
         print(f"DEBUG: X_FORWARDED_HOST: {request.META.get('HTTP_X_FORWARDED_HOST')}")
         return self.get_response(request)
 
-MIDDLEWARE.insert(0, 'monitor.settings.DebugHostMiddleware')
+MIDDLEWARE.insert(0, DebugHostMiddleware)
