@@ -141,9 +141,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 class DebugHostMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
+
     def __call__(self, request):
-        logger.info(f"DEBUG: HTTP_HOST: {request.META.get('HTTP_HOST')}")
-        logger.info(f"DEBUG: X_FORWARDED_HOST: {request.META.get('HTTP_X_FORWARDED_HOST')}")
+        print("Middleware DEBUG: Request received")
+        print(f"HTTP_HOST: {request.META.get('HTTP_HOST')}")
         return self.get_response(request)
 
-MIDDLEWARE.insert(0, DebugHostMiddleware)
+MIDDLEWARE.insert(0, 'monitor.settings.DebugHostMiddleware')
