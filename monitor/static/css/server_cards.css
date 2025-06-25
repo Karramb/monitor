@@ -79,3 +79,48 @@
   font-weight: 500;
   color: #333;
 }
+
+.btn-outline-info {
+  color: #0dcaf0;
+  border-color: #0dcaf0;
+}
+
+.btn-outline-info:hover {
+  background-color: #0dcaf0;
+  color: white;
+}
+
+.btn-outline-warning {
+  color: #ffc107;
+  border-color: #ffc107;
+}
+
+.btn-outline-warning:hover {
+  background-color: #ffc107;
+  color: black;
+}
+
+/* Расположение кнопок */
+.btn-group.w-100 {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-group.w-100 .btn {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+  .btn-group.w-100 .btn {
+    font-size: 0.8rem;
+  }
+}
+
+/* Иконки */
+.fas.me-1 {
+  margin-right: 0.25rem;
+}

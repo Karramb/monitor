@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const configStatusEl = card.querySelector('.config-status');
     const toggleBtn = card.querySelector('.toggle-btn');
     const restoreBtn = card.querySelector('.restore-btn');
+    const fastPullBtn = card.querySelector('.fast-pull-btn');
+    const pullReloadBtn = card.querySelector('.pull-reload-btn');
     const socket = new WebSocket(`ws://${window.location.host}/ws/core/${hostId}/`);
     
     // Привязываем карточку к сокету для доступа в обработчиках
@@ -60,6 +62,20 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     }
 
+    function enableButtons() {
+      if (toggleBtn) toggleBtn.disabled = false;
+      if (restoreBtn) restoreBtn.disabled = false;
+      if (fastPullBtn) fastPullBtn.disabled = false;
+      if (pullReloadBtn) pullReloadBtn.disabled = false;
+    }
+
+    function disableButtons() {
+      if (toggleBtn) toggleBtn.disabled = true;
+      if (restoreBtn) restoreBtn.disabled = true;
+      if (fastPullBtn) fastPullBtn.disabled = true;
+      if (pullReloadBtn) pullReloadBtn.disabled = true;
+    }
+
     socket.onmessage = function(event) {
       const data = JSON.parse(event.data);
       console.log("WebSocket message:", data); 
@@ -75,33 +91,71 @@ document.addEventListener("DOMContentLoaded", function() {
         return;
       }
       
+      if (data.action === 'fast_pull_started') {
+        showGlobalSpinner('Выполнение git pull...');
+        return;
+      }
+      
+      if (data.action === 'pull_with_reload_started') {
+        showGlobalSpinner('Pull + Reload...');
+        return;
+      }
+      
       // Обработка завершения операций
       if (data.action === 'toggle_completed') {
         hideGlobalSpinner();
-        toggleBtn.disabled = false;
         showAlert('success', 'База успешно переключена');
+        enableButtons();
         return;
       }
       
       if (data.action === 'restore_completed') {
         hideGlobalSpinner();
-        restoreBtn.disabled = false;
         showAlert('success', 'Дам PG успешно восстановлен');
+        enableButtons();
+        return;
+      }
+      
+      if (data.action === 'fast_pull_completed') {
+        hideGlobalSpinner();
+        showAlert('success', 'Git pull выполнен успешно');
+        enableButtons();
+        return;
+      }
+      
+      if (data.action === 'pull_with_reload_completed') {
+        hideGlobalSpinner();
+        showAlert('success', 'Pull + Reload выполнен успешно');
+        enableButtons();
         return;
       }
       
       // Обработка ошибок
       if (data.action === 'toggle_failed') {
         hideGlobalSpinner();
-        toggleBtn.disabled = false;
         showAlert('danger', `Ошибка переключения: ${data.error}`);
+        enableButtons();
         return;
       }
       
       if (data.action === 'restore_failed') {
         hideGlobalSpinner();
-        restoreBtn.disabled = false;
         showAlert('danger', `Ошибка восстановления: ${data.error}`);
+        enableButtons();
+        return;
+      }
+      
+      if (data.action === 'fast_pull_failed') {
+        hideGlobalSpinner();
+        showAlert('danger', `Ошибка git pull: ${data.error}`);
+        enableButtons();
+        return;
+      }
+      
+      if (data.action === 'pull_with_reload_failed') {
+        hideGlobalSpinner();
+        showAlert('danger', `Ошибка Pull + Reload: ${data.error}`);
+        enableButtons();
         return;
       }
       
@@ -119,19 +173,19 @@ document.addEventListener("DOMContentLoaded", function() {
     socket.onerror = function(event) {
       hideGlobalSpinner();
       showAlert('danger', 'Ошибка соединения');
+      enableButtons();
       console.error("WebSocket error for host ID", hostId, event);
     };
     
     socket.onclose = function() {
       hideGlobalSpinner();
-      if (toggleBtn) toggleBtn.disabled = false;
-      if (restoreBtn) restoreBtn.disabled = false;
+      enableButtons();
     };
 
     if (toggleBtn) {
       toggleBtn.addEventListener('click', function() {
         if (confirm("Вы уверены, что хотите переключить базу данных?\nЭто может привести к кратковременной недоступности сервиса.")) {
-          toggleBtn.disabled = true;
+          disableButtons();
           socket.send(JSON.stringify({action: 'toggle_mongo'}));
         }
       });
@@ -140,8 +194,26 @@ document.addEventListener("DOMContentLoaded", function() {
     if (restoreBtn) {
       restoreBtn.addEventListener('click', function() {
         if (confirm("Вы уверены, что хотите накатить дамп PG?\nЭто приведет к перезаписи текущих данных в базе.")) {
-          restoreBtn.disabled = true;
+          disableButtons();
           socket.send(JSON.stringify({action: 'restore_backup'}));
+        }
+      });
+    }
+
+    if (fastPullBtn) {
+      fastPullBtn.addEventListener('click', function() {
+        if (confirm("Вы уверены, что хотите выполнить быстрый git pull в директории /home/jsand/common?")) {
+          disableButtons();
+          socket.send(JSON.stringify({action: 'fast_pull'}));
+        }
+      });
+    }
+
+    if (pullReloadBtn) {
+      pullReloadBtn.addEventListener('click', function() {
+        if (confirm("Вы уверены, что хотите выполнить git pull с последующим redeploy? (git pull + deploy_remote + docker-compose up)")) {
+          disableButtons();
+          socket.send(JSON.stringify({action: 'pull_with_reload'}));
         }
       });
     }

@@ -137,6 +137,18 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     username=os.getenv('SSH_USERNAME'),
                     password=os.getenv('SSH_PASSWORD')
                 )
+            elif data.get('action') == 'fast_pull':
+                await self.fast_pull(
+                    ssh_host,
+                    username=os.getenv('SSH_USERNAME'),
+                    password=os.getenv('SSH_PASSWORD')
+                )
+            elif data.get('action') == 'pull_with_reload':
+                await self.pull_with_reload(
+                    ssh_host,
+                    username=os.getenv('SSH_USERNAME'),
+                    password=os.getenv('SSH_PASSWORD')
+                )
         except Exception as e:
             print(f"Error in receive: {str(e)}")
 
@@ -216,3 +228,100 @@ class MonitorConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             raise Exception(f"Toggle error: {str(e)}")
+
+    async def fast_pull(self, ssh_host, username, password):
+        try:
+            async with asyncssh.connect(
+                host=ssh_host.host,
+                port=ssh_host.port,
+                username=username,
+                password=password,
+                known_hosts=None,
+                connect_timeout=10
+            ) as conn:
+                await self.send(json.dumps({
+                    'action': 'fast_pull_started',
+                    'message': 'Пуллим код'
+                }))
+
+                result = await conn.run('cd /home/jsand/common && git pull origin main', check=False)
+
+                if result.exit_status != 0:
+                    await self.send(json.dumps({
+                        'action': 'fast_pull_failed',
+                        'error': result.stderr or "Fast pull failed"
+                    }))
+                    return
+                
+                await self.send(json.dumps({
+                    'action': 'fast_pull_completed',
+                    'result': result.stdout
+                }))
+
+                if result.exit_status != 0:
+                    raise Exception(result.stderr or "Fast pull failed")
+                return result.stdout
+
+        except Exception as e:
+            raise Exception(f"Fast pool error: {str(e)}")
+
+    async def pull_with_reload(self, ssh_host, username, password):
+        try:
+            async with asyncssh.connect(
+                host=ssh_host.host,
+                port=ssh_host.port,
+                username=username,
+                password=password,
+                known_hosts=None,
+                connect_timeout=10
+            ) as conn:
+                await self.send(json.dumps({
+                    'action': 'pull_with_reload_started',
+                    'message': 'Пуллим код и перезагружаемся'
+                }))
+
+                # 1. Git pull
+                result = await conn.run('cd /home/jsand/common && git pull origin main', check=False)
+                if result.exit_status != 0:
+                    raise Exception(f"Git pull failed: {result.stderr or 'Unknown error'}")
+                
+                if result.exit_status != 0:
+                    await self.send(json.dumps({
+                        'action': 'pull_with_reload_failed',
+                        'error': result.stderr or "Pull with reload failed"
+                    }))
+                    return
+                
+                # 2. Deploy remote
+                result = await conn.run('/usr/local/bin/deploy_remote', check=False)
+                if result.exit_status != 0:
+                    raise Exception(f"Deploy remote failed: {result.stderr or 'Unknown error'}")
+                
+                if result.exit_status != 0:
+                    await self.send(json.dumps({
+                        'action': 'pull_with_reload_failed',
+                        'error': result.stderr or "Pull with reload failed"
+                    }))
+                    return
+                
+                # 3. Docker compose up
+                docker_compose_file = ssh_host.docker_base              
+                result = await conn.run(f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d', check=False)
+                if result.exit_status != 0:
+                    raise Exception(f"Docker compose up failed: {result.stderr or 'Unknown error'}")
+                
+                if result.exit_status != 0:
+                    await self.send(json.dumps({
+                        'action': 'pull_with_reload_failed',
+                        'error': result.stderr or "Pull with reload failed"
+                    }))
+                    
+                await self.send(json.dumps({
+                    'action': 'pull_with_reload_completed',
+                    'result': result.stdout
+                }))
+                
+                return "All operations completed successfully"
+
+        except Exception as e:
+            raise Exception(f"Pool with reload error: {str(e)}")

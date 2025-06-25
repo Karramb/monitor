@@ -5,15 +5,30 @@
     </div>
 
     <div class="card-body py-2 text-center" style="position: relative;">
-      <div class="btn-group">
+      <!-- Первая строка кнопок -->
+      <div class="btn-group w-100 mb-2">
         {% if host.button_change_base %}
         <button class="btn btn-sm btn-outline-primary toggle-btn" data-host-id="{{ host.id }}">
-          Переключить базу
+          <i class="fas fa-exchange-alt me-1"></i> Переключить базу
         </button>
         {% endif %}
         {% if host.button_dump_pg %}
         <button class="btn btn-sm btn-outline-success restore-btn" data-host-id="{{ host.id }}">
-          Накатить дамп PG
+          <i class="fas fa-database me-1"></i> Накатить дамп
+        </button>
+        {% endif %}
+      </div>
+      
+      <!-- Вторая строка кнопок -->
+      <div class="btn-group w-100">
+        {% if host.button_fast_pull %}
+        <button class="btn btn-sm btn-outline-info fast-pull-btn" data-host-id="{{ host.id }}">
+          <i class="fas fa-arrow-down me-1"></i> Git pull
+        </button>
+        {% endif %}
+        {% if host.button_pull_reload %}
+        <button class="btn btn-sm btn-outline-warning pull-reload-btn" data-host-id="{{ host.id }}">
+          <i class="fas fa-sync-alt me-1"></i> Полный reload
         </button>
         {% endif %}
       </div>
@@ -26,6 +41,7 @@
         </div>
         Проверка конфигурации...
       </div>
+      <div class="alerts-container mt-2"></div>
     </div>
   </div>
 </div>

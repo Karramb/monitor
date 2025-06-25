@@ -7,10 +7,12 @@ class SSHHost(models.Model):
     name = models.CharField(max_length=100)
     host = models.CharField(max_length=100)
     port = models.IntegerField(default=22)
-    button_change_base = models.BooleanField()
-    button_dump_pg = models.BooleanField()
+    button_change_base = models.BooleanField(default=False)
+    button_dump_pg = models.BooleanField(default=False)
     docker_base = models.CharField(max_length=100)
     docker_prod = models.CharField(max_length=100)
+    button_fast_pull = models.BooleanField(default=False)
+    button_pull_reload = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'сервер'
