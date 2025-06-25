@@ -1,15 +1,19 @@
+import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-load_dotenv()
+ENV_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(ENV_DIR / '.env')
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-tnfh*x2+mda!ntqxyx1x-+s-te#$r_15n(@8#3h3-y#jq3!ua6'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+AUTH_USER_MODEL = 'users.ArkanUser'
 
 # Application definition
 
@@ -68,12 +72,25 @@ CHANNEL_LAYERS = {
     },
 }
 
-DATABASES = {
+SQLITE_DB = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+POSTGRES_DB = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'django'),
+        'USER': os.getenv('POSTGRES_USER', 'django'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD',),
+        'HOST': os.getenv('DB_HOST',),
+        'PORT': os.getenv('DB_PORT',)
+    }
+}
+
+DATABASES = POSTGRES_DB if os.getenv('USE_POSTGRES_DB', 'False') == 'True' else SQLITE_DB
 
 AUTH_PASSWORD_VALIDATORS = [
     {
