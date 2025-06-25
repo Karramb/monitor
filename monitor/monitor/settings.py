@@ -134,3 +134,14 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+class DebugHostMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+    def __call__(self, request):
+        print(f"DEBUG: HTTP_HOST: {request.META.get('HTTP_HOST')}")
+        print(f"DEBUG: X_FORWARDED_HOST: {request.META.get('HTTP_X_FORWARDED_HOST')}")
+        return self.get_response(request)
+
+MIDDLEWARE.insert(0, 'monitor.settings.DebugHostMiddleware')
