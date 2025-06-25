@@ -22,7 +22,7 @@ services:
     ports:
       - "4000:8000"
     volumes:
-      - monitor_data:/app
+      - ./monitor:/app
   
   redis:
     image: redis:latest
