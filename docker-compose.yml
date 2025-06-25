@@ -1,7 +1,36 @@
 services:
+
+  postgres:
+    image: postgres:17.5
+    container_name: monitor_postgres
+    environment:
+      POSTGRES_DB: monitor_db
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: your_secure_password_here
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  monitor:
+    build: ./monitor
+    container_name: monitor
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432  
+    ports:
+      - "4000:8000"
+    volumes:
+      - monitor_data:/app
+  
   redis:
     image: redis:latest
-    container_name: my_redis
+    container_name: monitor_redis
     restart: always
     ports:
       - "6378:6379"
@@ -10,3 +39,5 @@ services:
 
 volumes:
   redis_data:
+  monitor_data:
+  postgres_data:

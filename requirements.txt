@@ -1,9 +1,0 @@
-asyncssh==2.21.0
-channels==4.2.2
-channels_redis==4.2.1
-daphne==4.2.0
-Django==4.2.23
-django_bootstrap5 == 25.1
-docker==7.1.0
-python-dotenv==1.1.0
-redis==6.2.0
