@@ -1,9 +1,6 @@
 import os
-import logging
 from dotenv import load_dotenv
 from pathlib import Path
-
-logger = logging.getLogger('django')
 
 ENV_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(ENV_DIR / '.env')
@@ -137,14 +134,3 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-class DebugHostMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        print("Middleware DEBUG: Request received")
-        print(f"HTTP_HOST: {request.META.get('HTTP_HOST')}")
-        return self.get_response(request)
-
-MIDDLEWARE.insert(0, 'monitor.settings.DebugHostMiddleware')
