@@ -6,15 +6,15 @@
 {% block content %}
 <div id="servers" class="row">
   {% for host in hosts %}
-  {% include "partials/_server_card.html" %}
+  {% include "partials/_host_list.html" %}
   {% endfor %}
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{% static 'js/server_cards.js' %}"></script>
+<script src="{% static 'js/host_list.js' %}"></script>
 {% endblock %}
 
 {% block extra_styles %}
-<link rel="stylesheet" href="{% static 'css/server_cards.css' %}">
+<link rel="stylesheet" href="{% static 'css/host_list.css' %}">
 {% endblock %}
