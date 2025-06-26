@@ -6,7 +6,8 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6">
-    <div class="card mb-4">
+    <!-- ГЛАВНОЕ: добавил server-card класс и data-host-id -->
+    <div class="card server-card mb-4" data-host-id="{{ host.id }}">
       <div class="card-header bg-light">
         <h5 class="card-title mb-0">{{ host.name }}</h5>
       </div>
@@ -22,37 +23,37 @@
         <!-- Кнопки управления -->
         <div class="btn-grid">
           {% if host.button_change_base %}
-          <button class="btn btn-outline-primary toggle-btn w-100 mb-2" data-host-id="{{ host.id }}">
+          <button class="btn btn-outline-primary toggle-btn w-100 mb-2">
             <i class="fas fa-exchange-alt me-1"></i> Переключить базу
           </button>
           {% endif %}
           
           {% if host.button_dump_pg %}
-          <button class="btn btn-outline-success restore-btn w-100 mb-2" data-host-id="{{ host.id }}">
+          <button class="btn btn-outline-success restore-btn w-100 mb-2">
             <i class="fas fa-database me-1"></i> Накатить дамп PG
           </button>
           {% endif %}
           
           {% if host.button_fast_pull %}
-          <button class="btn btn-outline-info fast-pull-btn w-100 mb-2" data-host-id="{{ host.id }}">
+          <button class="btn btn-outline-info fast-pull-btn w-100 mb-2">
             <i class="fas fa-arrow-down me-1"></i> Быстрый pull
           </button>
           {% endif %}
           
           {% if host.button_pull_reload %}
-          <button class="btn btn-outline-warning pull-reload-btn w-100" data-host-id="{{ host.id }}">
+          <button class="btn btn-outline-warning pull-reload-btn w-100">
             <i class="fas fa-sync-alt me-1"></i> Полный reload
           </button>
           {% endif %}
         </div>
       </div>
     </div>
-
+    
     <!-- Пустое окошко -->
     <div class="card">
       <div class="card-body">
         <!-- Здесь может быть дополнительная информация -->
-         Бла-бла-бла
+        Бла-бла-бла
       </div>
     </div>
   </div>
@@ -66,21 +67,6 @@
 
 {% block extra_styles %}
 <link rel="stylesheet" href="{% static 'css/server_cards.css' %}">
-<style>
-  .btn-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-  }
-  
-  .config-status {
-    transition: all 0.3s ease;
-  }
-  
-  .status-text {
-    margin-left: 0.5rem;
-  }
-</style>
 {% endblock %}
 
 {% block extra_scripts %}

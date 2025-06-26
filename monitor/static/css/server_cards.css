@@ -124,3 +124,22 @@
 .fas.me-1 {
   margin-right: 0.25rem;
 }
+
+.card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(33, 37, 41, 0.75); /* затемнение */
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 0.5rem;
+  transition: opacity 0.3s;
+}
+
+.overlay-content {
+  text-align: center;
+}
