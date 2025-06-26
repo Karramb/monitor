@@ -1,0 +1,159 @@
+[1mdiff --git a/monitor/core/models.py b/monitor/core/models.py[m
+[1mindex 62e4f73..ca2dc32 100644[m
+[1m--- a/monitor/core/models.py[m
+[1m+++ b/monitor/core/models.py[m
+[36m@@ -20,3 +20,5 @@[m [mclass SSHHost(models.Model):[m
+ [m
+     def __str__(self):[m
+         return self.name[:LENGTH_STR][m
+[41m+[m
+[41m+[m
+[1mdiff --git a/monitor/static/js/server_cards_for_detail.js b/monitor/static/js/server_cards_for_detail.js[m
+[1mindex b15b20a..10dbac8 100644[m
+[1m--- a/monitor/static/js/server_cards_for_detail.js[m
+[1m+++ b/monitor/static/js/server_cards_for_detail.js[m
+[36m@@ -1,221 +1,140 @@[m
+ document.addEventListener("DOMContentLoaded", function() {[m
+[31m-  document.querySelectorAll('.server-card').forEach(function(card) {[m
+[31m-    const hostId = card.dataset.hostId;[m
+[31m-    const configStatusEl = card.querySelector('.config-status');[m
+[31m-    const toggleBtn = card.querySelector('.toggle-btn');[m
+[31m-    const restoreBtn = card.querySelector('.restore-btn');[m
+[31m-    const fastPullBtn = card.querySelector('.fast-pull-btn');[m
+[31m-    const pullReloadBtn = card.querySelector('.pull-reload-btn');[m
+[31m-    const socket = new WebSocket(`ws://${window.location.host}/ws/core/${hostId}/`);[m
+[31m-    [m
+[31m-    // Привязываем карточку к сокету для доступа в обработчиках[m
+[31m-    socket.card = card;[m
+[32m+[m[32m  const hostId = document.querySelector('.toggle-btn')?.dataset.hostId;[m
+[32m+[m[32m  if (!hostId) return;[m
+[32m+[m
+[32m+[m[32m  const configStatusEl = document.querySelector('.config-status');[m
+[32m+[m[32m  const statusTextEl = configStatusEl.querySelector('.status-text');[m
+[32m+[m[32m  const buttons = {[m
+[32m+[m[32m    toggle: document.querySelector('.toggle-btn'),[m
+[32m+[m[32m    restore: document.querySelector('.restore-btn'),[m
+[32m+[m[32m    fastPull: document.querySelector('.fast-pull-btn'),[m
+[32m+[m[32m    pullReload: document.querySelector('.pull-reload-btn')[m
+[32m+[m[32m  };[m
+[32m+[m[41m  [m
+[32m+[m[32m  const socket = new WebSocket(`ws://${window.location.host}/ws/core/${hostId}/`);[m
+[32m+[m[32m  const alertsContainer = document.getElementById('liveAlerts');[m
+ [m
+[31m-    function showGlobalSpinner(message) {[m
+[31m-      hideGlobalSpinner();[m
+[32m+[m[32m  // Функция обновления статуса конфигурации и спиннера[m
+[32m+[m[32m  function updateConfigStatus(status) {[m
+[32m+[m[32m    if (!status) return;[m
+     [m
+[31m-      const spinnerHtml = `[m
+[31m-        <div class="global-spinner position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.8); z-index: 10;">[m
+[31m-          <div class="text-center">[m
+[31m-            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">[m
+[31m-              <span class="visually-hidden">Загрузка...</span>[m
+[31m-            </div>[m
+[31m-            <div class="spinner-message mt-2">${message}</div>[m
+[31m-          </div>[m
+[31m-        </div>[m
+[31m-      `;[m
+[32m+[m[32m    const spinner = configStatusEl.querySelector('.spinner-border');[m
+[32m+[m[32m    if (spinner) {[m
+[32m+[m[32m      spinner.style.display = 'none'; // Скрываем вместо удаления[m
+[32m+[m[32m    }[m
+     [m
+[31m-      const tempDiv = document.createElement('div');[m
+[31m-      tempDiv.innerHTML = spinnerHtml;[m
+[31m-      const spinnerEl = tempDiv.firstElementChild;[m
+[32m+[m[32m    // Остальной код без изменений[m
+[32m+[m[32m    statusTextEl.textContent = status;[m
+[32m+[m[32m    configStatusEl.className = 'config-status text-center p-2 rounded ';[m
+     [m
+[31m-      if (spinnerEl) {[m
+[31m-        // Добавляем спиннер в саму карточку[m
+[31m-        card.style.position = 'relative'; // нужно для absolute overlay[m
+[31m-        card.appendChild(spinnerEl);[m
+[31m-      }[m
+[32m+[m[32m    if (status.includes("тестовая")) {[m
+[32m+[m[32m      configStatusEl.classList.add("bg-warning", "text-dark");[m
+[32m+[m[32m    } else if (status.includes("продакшн")) {[m
+[32m+[m[32m      configStatusEl.classList.add("bg-success", "text-white");[m
+[32m+[m[32m    } else {[m
+[32m+[m[32m      configStatusEl.classList.add("bg-secondary", "text-white");[m
+     }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Функция показа уведомлений[m
+[32m+[m[32m  function showAlert(type, message) {[m
+[32m+[m[32m    const alert = document.createElement('div');[m
+[32m+[m[32m    alert.className = `alert alert-${type} alert-dismissible fade show`;[m
+[32m+[m[32m    alert.innerHTML = `[m
+[32m+[m[32m      ${message}[m
+[32m+[m[32m      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>[m
+[32m+[m[32m    `;[m
+[32m+[m[32m    alertsContainer.appendChild(alert);[m
+     [m
+[31m-    function hideGlobalSpinner() {[m
+[31m-      const spinner = card.querySelector('.global-spinner');[m
+[31m-      if (spinner) spinner.remove();[m
+[31m-    }[m
+[32m+[m[32m    setTimeout(() => {[m
+[32m+[m[32m      alert.classList.remove('show');[m
+[32m+[m[32m      setTimeout(() => alert.remove(), 150);[m
+[32m+[m[32m    }, 5000);[m
+[32m+[m[32m  }[m
+ [m
+[31m-    function showAlert(type, message) {[m
+[31m-      const alertDiv = document.createElement('div');[m
+[31m-      alertDiv.className = `alert alert-${type} mt-2 p-2`;[m
+[31m-      alertDiv.textContent = message;[m
+[31m-      card.querySelector('.card-footer').appendChild(alertDiv);[m
+[31m-      [m
+[31m-      // Автоскрытие через 5 секунд[m
+[31m-      setTimeout(() => alertDiv.remove(), 5000);[m
+[31m-    }[m
+[32m+[m[32m  // Обработчики WebSocket[m
+[32m+[m[32m  socket.onmessage = function(event) {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const data = JSON.parse(event.data);[m
+[32m+[m[32m      console.log("WebSocket message:", data);[m
+ [m
+[31m-    function updateConfigStatus(status) {[m
+[31m-      configStatusEl.innerHTML = status;[m
+[31m-      if (status.includes("тестовая")) {[m
+[31m-        configStatusEl.className = "config-status text-center p-2 rounded bg-warning text-dark";[m
+[31m-      } else if (status.includes("продакшн")) {[m
+[31m-        configStatusEl.className = "config-status text-center p-2 rounded bg-success text-white";[m
+[31m-      } else {[m
+[31m-        configStatusEl.className = "config-status text-center p-2 rounded bg-secondary text-white";[m
+[32m+[m[32m      // Обновление статуса конфигурации[m
+[32m+[m[32m      if (data.config_status) {[m
+[32m+[m[32m        updateConfigStatus(data.config_status);[m
+       }[m
+[31m-    }[m
+[31m-[m
+[31m-    function enableButtons() {[m
+[31m-      if (toggleBtn) toggleBtn.disabled = false;[m
+[31m-      if (restoreBtn) restoreBtn.disabled = false;[m
+[31m-      if (fastPullBtn) fastPullBtn.disabled = false;[m
+[31m-      if (pullReloadBtn) pullReloadBtn.disabled = false;[m
+[31m-    }[m
+[31m-[m
+[31m-    function disableButtons() {[m
+[31m-      if (toggleBtn) toggleBtn.disabled = true;[m
+[31m-      if (restoreBtn) restoreBtn.disabled = true;[m
+[31m-      if (fastPullBtn) fastPullBtn.disabled = true;[m
+[31m-      if (pullReloadBtn) pullReloadBtn.disabled = true;[m
+[31m-    }[m
+ [m
+[31m-    socket.onmessage = function(event) {[m
+[31m-      const data = JSON.parse(event.data);[m
+[31m-      console.log("WebSocket message:", data); [m
+[31m-      [m
+[31m-      // Обработка начала операций[m
+[31m-      if (data.action === 'toggle_started') {[m
+[31m-        showGlobalSpinner('Переключение MongoDB...');[m
+[31m-        return;[m
+[31m-      }[m
+[31m-      [m
+[31m-      if (data.action === 'restore_started') {[m
+[31m
