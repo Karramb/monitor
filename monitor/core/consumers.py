@@ -216,7 +216,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'message': 'Начато восстановление дампа PG'
                 }))
 
-                result = await conn.run('/usr/local/bin/restore-backup', check=False)
+                result = await conn.sudo('/usr/local/bin/restore-backup', check=False)
 
                 if result.exit_status != 0:
                     raise Exception(result.stderr or "Restore failed")
