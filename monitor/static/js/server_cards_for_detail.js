@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function() {
     overlay.classList.add('d-none');
   }
 
-  // 💬 Показываем только config-status
+  // 💬 Показываем только config-status со спиннером и сообщением
   function showSpinner(message) {
     console.log('🔄 Показываем спиннер:', message);
 
@@ -79,11 +79,14 @@ document.addEventListener("DOMContentLoaded", function() {
     console.log('📊 Обновляем статус:', status);
     if (!status) return;
 
-    const spinner = configStatusEl.querySelector('.spinner-border');
-    if (spinner) spinner.remove();
-
     statusTextEl.textContent = status;
     configStatusEl.className = 'config-status text-center p-2 rounded mb-3';
+
+    // 🔻 Убираем спиннер, если операция не в процессе
+    if (!operationInProgress) {
+      const spinner = configStatusEl.querySelector('.spinner-border');
+      if (spinner) spinner.remove();
+    }
 
     if (status.includes("тестовая")) {
       configStatusEl.classList.add("bg-warning", "text-dark");
@@ -109,6 +112,8 @@ document.addEventListener("DOMContentLoaded", function() {
     }, 5000);
   }
 
+  let operationInProgress = false;
+
   socket.onopen = function() {
     console.log('✅ WebSocket подключен');
     socket.send(JSON.stringify({action: 'get_status'}));
@@ -129,28 +134,37 @@ document.addEventListener("DOMContentLoaded", function() {
         fast_pull_started: ['info', 'Начат git pull', 'Выполняется git pull...'],
         pull_with_reload_started: ['info', 'Начат Pull + Reload', 'Pull + Reload...'],
 
-        toggle_completed: ['success', 'База успешно переключена'],
-        restore_completed: ['success', 'Дамп PG успешно восстановлен'],
-        fast_pull_completed: ['success', 'Git pull выполнен успешно'],
-        pull_with_reload_completed: ['success', 'Pull + Reload выполнен успешно'],
+        toggle_completed: ['success', 'База успешно переключена', null],
+        restore_completed: ['success', 'Дамп PG успешно восстановлен', null],
+        fast_pull_completed: ['success', 'Git pull выполнен успешно', null],
+        pull_with_reload_completed: ['success', 'Pull + Reload выполнен успешно', null],
 
-        toggle_failed: ['danger', 'Ошибка переключения'],
-        restore_failed: ['danger', 'Ошибка восстановления'],
-        fast_pull_failed: ['danger', 'Ошибка git pull'],
-        pull_with_reload_failed: ['danger', 'Ошибка Pull + Reload']
+        toggle_failed: ['danger', 'Ошибка переключения', null],
+        restore_failed: ['danger', 'Ошибка восстановления', null],
+        fast_pull_failed: ['danger', 'Ошибка git pull', null],
+        pull_with_reload_failed: ['danger', 'Ошибка Pull + Reload', null]
       };
 
       const actionData = actionMap[data.action];
       if (actionData) {
         const [type, msg, spinnerText] = actionData;
         showAlert(type, data.error ? `${msg}: ${data.error}` : msg);
+
         if (spinnerText) {
+          operationInProgress = true;
           showOverlay(spinnerText);
           showSpinner(spinnerText);
+          disableButtons();
         } else {
+          operationInProgress = false;
           hideOverlay();
+
+          // ✅ Удаляем спиннер явно после завершения операции
+          const spinner = configStatusEl.querySelector('.spinner-border');
+          if (spinner) spinner.remove();
+
+          enableButtons();
         }
-        enableButtons();
       }
     } catch (e) {
       console.error("❌ Ошибка обработки сообщения:", e);
@@ -174,7 +188,11 @@ document.addEventListener("DOMContentLoaded", function() {
     enableButtons();
   };
 
+  // Если хочешь таймаут, добавь так, чтобы он не мешал операции:
+  /*
   setTimeout(() => {
+    if (operationInProgress) return;
+
     const spinner = configStatusEl.querySelector('.spinner-border');
     if (spinner) {
       console.log('⏰ Таймаут ожидания статуса');
@@ -182,6 +200,7 @@ document.addEventListener("DOMContentLoaded", function() {
       hideOverlay();
     }
   }, 10000);
+  */
 
   function disableButtons() {
     Object.values(buttons).forEach(btn => {
@@ -200,6 +219,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (confirm("Вы уверены, что хотите переключить базу данных?")) {
         disableButtons();
         showOverlay('Отправка команды...');
+        showSpinner('Отправка команды...');
         socket.send(JSON.stringify({action: 'toggle_mongo'}));
       }
     });
@@ -210,6 +230,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (confirm("Вы уверены, что хотите накатить дамп PG?")) {
         disableButtons();
         showOverlay('Отправка команды...');
+        showSpinner('Отправка команды...');
         socket.send(JSON.stringify({action: 'restore_backup'}));
       }
     });
@@ -220,6 +241,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (confirm("Вы уверены, что хотите выполнить быстрый git pull?")) {
         disableButtons();
         showOverlay('Отправка команды...');
+        showSpinner('Отправка команды...');
         socket.send(JSON.stringify({action: 'fast_pull'}));
       }
     });
@@ -230,6 +252,7 @@ document.addEventListener("DOMContentLoaded", function() {
       if (confirm("Вы уверены, что хотите выполнить git pull с redeploy?")) {
         disableButtons();
         showOverlay('Отправка команды...');
+        showSpinner('Отправка команды...');
         socket.send(JSON.stringify({action: 'pull_with_reload'}));
       }
     });

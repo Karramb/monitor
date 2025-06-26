@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -135,3 +136,32 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[%(asctime)s] [%(levelname)s] %(name)s: %(message)s',
+        },
+    },
+    'handlers': {
+        'std': {
+            'level': os.getenv('LOG_LEVEL'),
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'standard',
+        }
+    },
+    'root': {
+        'handlers': ['std'],
+        'level': os.getenv('LOG_LEVEL'),
+    },
+    'loggers': {
+        'core': {  # для приложения core
+            'handlers': ['std'],
+            'level': os.getenv('LOG_LEVEL'),
+            'propagate': False,
+        }
+    }
+}

@@ -214,13 +214,15 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
-                logger.info("Соединение установлено. Начинаем восстановление дампа.")
+                logger.debug("Соединение установлено. Начинаем восстановление дампа.")
                 await self.send(json.dumps({
                     'action': 'restore_started',
                     'message': 'Начато восстановление дампа PG'
                 }))
 
+                logger.debug("Выполняем restore-backup.")
                 result = await conn.run('sudo /usr/local/bin/restore-backup', check=False)
+                
 
                 if result.exit_status != 0:
                     raise Exception(result.stderr or "Restore failed")
@@ -229,6 +231,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'action': 'restore_completed',
                     'result': result.stdout
                 }))
+                logger.debug("Успех restore-backup.")
 
         except Exception as e:
             raise Exception(f"Restore backup error: {str(e)}")
@@ -285,6 +288,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 }))
 
                 # 1. Git pull
+                logger.debug("Git pull.")
                 result = await conn.run('cd /home/jsand/common && git pull origin main', check=False)
                 if result.exit_status != 0:
                     raise Exception(f"Git pull failed: {result.stderr or 'Unknown error'}")
@@ -297,6 +301,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     return
                 
                 # 2. Deploy remote
+                logger.debug("Deploy remote.")
                 result = await conn.run('sudo /usr/local/bin/deploy_remote', check=False)
                 if result.exit_status != 0:
                     raise Exception(f"Deploy remote failed: {result.stderr or 'Unknown error'}")
@@ -309,6 +314,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     return
                 
                 # 3. Docker compose up
+                logger.debug("Docker compose up.")
                 docker_compose_file = ssh_host.docker_base              
                 result = await conn.run(f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d', check=False)
                 if result.exit_status != 0:
@@ -324,7 +330,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'action': 'pull_with_reload_completed',
                     'result': result.stdout
                 }))
-                
+                logger.debug("pull_with_reload completed successfully.")
                 return "All operations completed successfully"
 
         except Exception as e:
