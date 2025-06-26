@@ -297,7 +297,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     return
                 
                 # 2. Deploy remote
-                result = await conn.run('/usr/local/bin/deploy_remote', check=False)
+                result = await conn.run('sudo /usr/local/bin/deploy_remote', check=False)
                 if result.exit_status != 0:
                     raise Exception(f"Deploy remote failed: {result.stderr or 'Unknown error'}")
                 
