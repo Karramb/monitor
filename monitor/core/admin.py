@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.auth.models import Group
 
 from core.models import SSHHost
 
@@ -19,6 +18,3 @@ class SSHHostAdmin(admin.ModelAdmin):
         'name',
         'host'
     )
-
-
-admin.site.unregister(Group)

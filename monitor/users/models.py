@@ -31,3 +31,11 @@ class ArkanUser(AbstractUser):
         verbose_name='Фото профиля',
         upload_to='media/users_avatars/'
     )
+
+    class Meta:
+        ordering = ('username',)
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
+
+    def __str__(self):
+        return self.username
