@@ -1,12 +1,15 @@
 import asyncio
 import asyncssh
 import json
+import logging
 import os
 import traceback
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from core.models import SSHHost
+
+logger = logging.getLogger(__name__)
 
 
 class MonitorConsumer(AsyncWebsocketConsumer):
@@ -181,7 +184,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'message': 'Переключаем базу'
                 }))
 
-                result = await conn.run('/usr/local/bin/toggle-mongo', check=False)
+                result = await conn.run('sudo /usr/local/bin/toggle-mongo', check=False)
 
                 if result.exit_status != 0:
                     await self.send(json.dumps({
@@ -211,12 +214,13 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
+                logger.info("Соединение установлено. Начинаем восстановление дампа.")
                 await self.send(json.dumps({
                     'action': 'restore_started',
                     'message': 'Начато восстановление дампа PG'
                 }))
 
-                result = await conn.sudo('/usr/local/bin/restore-backup', check=False)
+                result = await conn.run('sudo /usr/local/bin/restore-backup', check=False)
 
                 if result.exit_status != 0:
                     raise Exception(result.stderr or "Restore failed")
@@ -227,7 +231,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 }))
 
         except Exception as e:
-            raise Exception(f"Toggle error: {str(e)}")
+            raise Exception(f"Restore backup error: {str(e)}")
 
     async def fast_pull(self, ssh_host, username, password):
         try:
