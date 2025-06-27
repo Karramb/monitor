@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -27,6 +28,7 @@ INSTALLED_APPS = [
     'daphne',
     'django.contrib.staticfiles',
     'django_bootstrap5',
+    'djoser',
     'channels',
     'core',
     'users',
@@ -164,4 +166,21 @@ LOGGING = {
             'propagate': False,
         }
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated', 
+    ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+
+SIMPLE_JWT = {
+    # Устанавливаем срок жизни токена
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }
