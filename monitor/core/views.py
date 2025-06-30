@@ -1,6 +1,8 @@
 from django.views.generic import (
     DetailView, ListView
 )
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
 
 from core.models import SSHHost
 
