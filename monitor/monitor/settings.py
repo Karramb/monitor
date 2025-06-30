@@ -28,7 +28,6 @@ INSTALLED_APPS = [
     'daphne',
     'django.contrib.staticfiles',
     'django_bootstrap5',
-    'djoser',
     'channels',
     'core',
     'users',
@@ -114,7 +113,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ru-RU'
 
 TIME_ZONE = 'UTC'
 
@@ -178,9 +177,6 @@ REST_FRAMEWORK = {
     ],
 }
 
+LOGIN_REDIRECT_URL = 'core:host-list' 
 
-SIMPLE_JWT = {
-    # Устанавливаем срок жизни токена
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
+LOGIN_URL = 'login'
