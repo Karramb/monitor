@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSH Server Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .animate-in {
+            animation: slideInFromRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { 
+            Monitor, 
+            Server, 
+            Database, 
+            GitBranch, 
+            RotateCcw, 
+            Download,
+            User,
+            LogOut,
+            RefreshCw,
+            CheckCircle,
+            AlertCircle,
+            XCircle,
+            Terminal,
+            Wifi,
+            WifiOff
+        } = lucide;
+
+        const App = () => {
+            const [hosts, setHosts] = useState([]);
+            const [user, setUser] = useState({ username: 'admin', isAuthenticated: true });
+            const [notifications, setNotifications] = useState([]);
+
+            // Получаем данные с вашего Django API
+            useEffect(() => {
+                fetchHosts();
+            }, []);
+
+            const fetchHosts = async () => {
+                try {
+                    // Замените на ваш реальный API endpoint
+                    const response = await fetch('/api/hosts/');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setHosts(data);
+                    } else {
+                        // Fallback на моковые данные для демо
+                        setHosts([
+                            {
+                                id: 1,
+                                name: 'Production Server',
+                                host: '192.168.1.100',
+                                port: 22,
+                                button_change_base: true,
+                                button_dump_pg: true,
+                                button_fast_pull: true,
+                                button_pull_reload: true,
+                                docker_base: 'docker-compose.base.yml',
+                                docker_prod: 'docker-compose.prod.yml',
+                                status: 'Подключена продакшн Монго',
+                                isConnected: true
+                            },
+                            {
+                                id: 2,
+                                name: 'Test Server',
+                                host: '192.168.1.101',
+                                port: 22,
+                                button_change_base: true,
+                                button_dump_pg: false,
+                                button_fast_pull: true,
+                                button_pull_reload: true,
+                                docker_base: 'docker-compose.base.yml',
+                                docker_prod: 'docker-compose.prod.yml',
+                                status: 'Подключена тестовая Монго',
+                                isConnected: true
+                            }
+                        ]);
+                    }
+                } catch (error) {
+                    console.error('Error fetching hosts:', error);
+                    // Показываем моковые данные в случае ошибки
+                    setHosts([
+                        {
+                            id: 1,
+                            name: 'Production Server',
+                            host: '192.168.1.100',
+                            port: 22,
+                            button_change_base: true,
+                            button_dump_pg: true,
+                            button_fast_pull: true,
+                            button_pull_reload: true,
+                            docker_base: 'docker-compose.base.yml',
+                            docker_prod: 'docker-compose.prod.yml',
+                            status: 'Подключена продакшн Монго',
+                            isConnected: true
+                        }
+                    ]);
+                }
+            };
+
+            const addNotification = (type, message) => {
+                const id = Date.now();
+                setNotifications(prev => [...prev, { id, type, message }]);
+                setTimeout(() => {
+                    setNotifications(prev => prev.filter(n => n.id !== id));
+                }, 5000);
+            };
+
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-slate-50 to-slate-100" },
+                React.createElement(Header, { user }),
+                React.createElement('main', { className: "container mx-auto px-4 py-8" },
+                    React.createElement('div', { className: "mb-8" },
+                        React.createElement('h1', { className: "text-4xl font-bold text-gray-900 mb-2" }, "Server Monitor"),
+                        React.createElement('p', { className: "text-gray-600" }, "Управление и мониторинг SSH серверов в режиме реального времени")
+                    ),
+                    React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" },
+                        hosts.map(host => 
+                            React.createElement(ServerCard, { 
+                                key: host.id, 
+                                host: host, 
+                                onNotification: addNotification 
+                            })
+                        )
+                    )
+                ),
+                React.createElement(NotificationContainer, { notifications })
+            );
+        };
+
+        const Header = ({ user }) => {
+            return React.createElement('header', { className: "bg-white shadow-lg border-b border-slate-200" },
+                React.createElement('nav', { className: "container mx-auto px-4 py-4" },
+                    React.createElement('div', { className: "flex items-center justify-between" },
+                        React.createElement('div', { className: "flex items-center space-x-8" },
+                            React.createElement('div', { className: "flex items-center space-x-2" },
+                                React.createElement(Monitor, { className: "w-8 h-8 text-blue-600" }),
+                                React.createElement('span', { className: "text-xl font-bold text-gray-900" }, "SSH Monitor")
+                            ),
+                            React.createElement('div', { className: "hidden md:flex space-x-6" },
+                                React.createElement('a', { 
+                                    href: "#", 
+                                    className: "px-3 py-2 rounded-lg bg-blue-100 text-blue-700 font-medium" 
+                                }, "Сервера"),
+                                React.createElement('a', { 
+                                    href: "#", 
+                                    className: "px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors" 
+                                }, "Бэклог")
+                            )
+                        ),
+                        user.isAuthenticated && React.createElement('div', { className: "flex items-center space-x-4" },
+                            React.createElement('div', { className: "flex items-center space-x-2 text-gray-700" },
+                                React.createElement(User, { className: "w-4 h-4" }),
+                                React.createElement('span', { className: "font-medium" }, user.username)
+                            ),
+                            React.createElement('button', { className: "flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors" },
+                                React.createElement(LogOut, { className: "w-4 h-4" }),
+                                React.createElement('span', {}, "Выйти")
+                            )
+                        )
+                    )
+                )
+            );
+        };
+
+        const ServerCard = ({ host, onNotification }) => {
+            const [isLoading, setIsLoading] = useState(false);
+            const [loadingMessage, setLoadingMessage] = useState('');
+            const [configStatus, setConfigStatus] = useState(host.status || 'Статус неизвестен');
+            const [isConnected, setIsConnected] = useState(host.isConnected || false);
+            const wsRef = useRef(null);
+
+            useEffect(() => {
+                connectWebSocket();
+                return () => {
+                    if (wsRef.current) {
+                        wsRef.current.close();
+                    }
+                };
+            }, [host.id]);
+
+            const connectWebSocket = () => {
+                try {
+                    // Подключение к вашему Django WebSocket
+                    const wsUrl = `ws://${window.location.host}/ws/core/${host.id}/`;
+                    wsRef.current = new WebSocket(wsUrl);
+                    
+                    wsRef.current.onopen = () => {
+                        console.log(`WebSocket connected for host ${host.id}`);
+                        setIsConnected(true);
+                    };
+
+                    wsRef.current.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        console.log('WebSocket message:', data);
+                        
+                        // Обработка сообщений от вашего Django consumer
+                        if (data.config_status) {
+                            setConfigStatus(data.config_status);
+                        }
+                        
+                        if (data.action) {
+                            handleWebSocketAction(data);
+                        }
+                        
+                        if (data.error) {
+                            onNotification('error', data.error);
+                        }
+                    };
+
+                    wsRef.current.onclose = () => {
+                        console.log(`WebSocket disconnected for host ${host.id}`);
+                        setIsConnected(false);
+                        setIsLoading(false);
+                    };
+
+                    wsRef.current.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        setIsConnected(false);
+                        onNotification('error', 'Ошибка соединения с сервером');
+                    };
+
+                } catch (error) {
+                    console.error('WebSocket connection error:', error);
+                    setIsConnected(false);
+                }
+            };
+
+            const handleWebSocketAction = (data) => {
+                if (data.action.endsWith('_started')) {
+                    setIsLoading(true);
+                    setLoadingMessage(data.message || 'Выполнение операции...');
+                } else if (data.action.endsWith('_completed')) {
+                    setIsLoading(false);
+                    setLoadingMessage('');
+                    onNotification('success', getSuccessMessage(data.action));
+                } else if (data.action.endsWith('_failed')) {
+                    setIsLoading(false);
+                    setLoadingMessage('');
+                    onNotification('error', data.error || 'Операция завершилась с ошибкой');
+                }
+            };
+
+            const executeAction = (action, confirmMessage) => {
+                if (!confirm(confirmMessage)) return;
+                
+                if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    wsRef.current.send(JSON.stringify({ action }));
+                } else {
+                    onNotification('error', 'Нет соединения с сервером');
+                }
+            };
+
+            const getSuccessMessage = (action) => {
+                const messages = {
+                    'toggle_completed': 'База успешно переключена',
+                    'restore_completed': 'Дамп PG успешно восстановлен',
+                    'fast_pull_completed': 'Git pull выполнен успешно',
+                    'pull_with_reload_completed': 'Pull + Reload выполнен успешно'
+                };
+                return messages[action] || 'Операция завершена успешно';
+            };
+
+            const getStatusColor = (status) => {
+                if (status.includes('тестовая')) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                if (status.includes('продакшн')) return 'bg-green-100 text-green-800 border-green-200';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+            };
+
+            return React.createElement('div', { 
+                className: "relative bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1" 
+            },
+                isLoading && React.createElement('div', { 
+                    className: "absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-10 rounded-xl" 
+                },
+                    React.createElement('div', { className: "text-center" },
+                        React.createElement(RefreshCw, { className: "w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" }),
+                        React.createElement('p', { className: "text-gray-700 font-medium" }, loadingMessage)
+                    )
+                ),
+                
+                React.createElement('div', { className: "p-6" },
+                    React.createElement('div', { className: "flex items-center justify-between mb-4" },
+                        React.createElement('div', { className: "flex items-center space-x-3" },
+                            React.createElement('div', { className: "p-2 bg-blue-100 rounded-lg" },
+                                React.createElement(Server, { className: "w-6 h-6 text-blue-600" })
+                            ),
+                            React.createElement('div', {},
+                                React.createElement('h3', { className: "text-lg font-semibold text-gray-900" }, host.name),
+                                React.createElement('p', { className: "text-sm text-gray-500" }, `${host.host}:${host.port}`)
+                            )
+                        ),
+                        React.createElement('div', { className: "flex items-center space-x-2" },
+                            isConnected 
+                                ? React.createElement(Wifi, { className: "w-5 h-5 text-green-500" })
+                                : React.createElement(WifiOff, { className: "w-5 h-5 text-red-500" })
+                        )
+                    ),
+                    
+                    React.createElement('div', { 
+                        className: `p-3 rounded-lg border mb-4 ${getStatusColor(configStatus)}` 
+                    },
+                        React.createElement('div', { className: "flex items-center space-x-2" },
+                            React.createElement(Database, { className: "w-4 h-4" }),
+                            React.createElement('span', { className: "text-sm font-medium" }, configStatus)
+                        )
+                    ),
+                    
+                    React.createElement('div', { className: "grid grid-cols-2 gap-3" },
+                        host.button_change_base && React.createElement(ActionButton, {
+                            icon: React.createElement(RotateCcw, { className: "w-4 h-4" }),
+                            label: "Переключить БД",
+                            variant: "warning",
+                            disabled: isLoading,
+                            onClick: () => executeAction('toggle_mongo', 
+                                "Вы уверены, что хотите переключить базу данных?\nЭто может привести к кратковременной недоступности сервиса."
+                            )
+                        }),
+                        
+                        host.button_dump_pg && React.createElement(ActionButton, {
+                            icon: React.createElement(Download, { className: "w-4 h-4" }),
+                            label: "Восстановить PG",
+                            variant: "danger",
+                            disabled: isLoading,
+                            onClick: () => executeAction('restore_backup',
+                                "Вы уверены, что хотите накатить дамп PG?\nЭто приведет к перезаписи текущих данных в базе."
+                            )
+                        }),
+                        
+                        host.button_fast_pull && React.createElement(ActionButton, {
+                            icon: React.createElement(GitBranch, { className: "w-4 h-4" }),
+                            label: "Git Pull",
+                            variant: "info",
+                            disabled: isLoading,
+                            onClick: () => executeAction('fast_pull',
+                                "Вы уверены, что хотите выполнить быстрый git pull в директории /home/jsand/common?"
+                            )
+                        }),
+                        
+                        host.button_pull_reload && React.createElement(ActionButton, {
+                            icon: React.createElement(Terminal, { className: "w-4 h-4" }),
+                            label: "Pull + Reload",
+                            variant: "primary",
+                            disabled: isLoading,
+                            onClick: () => executeAction('pull_with_reload',
+                                "Вы уверены, что хотите выполнить git pull с последующим redeploy?"
+                            )
+                        })
+                    )
+                )
+            );
+        };
+
+        const ActionButton = ({ icon, label, variant, disabled, onClick }) => {
+            const variants = {
+                primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+                warning: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+                danger: 'bg-red-600 hover:bg-red-700 text-white',
+                info: 'bg-cyan-600 hover:bg-cyan-700 text-white'
+            };
+
+            return React.createElement('button', {
+                onClick,
+                disabled,
+                className: `
+                    flex items-center justify-center space-x-2 px-3 py-2 rounded-lg font-medium text-sm
+                    transition-all duration-200 transform hover:scale-105
+                    ${variants[variant]}
+                    ${disabled ? 'opacity-50 cursor-not-allowed hover:scale-100' : 'shadow-md hover:shadow-lg'}
+                `
+            },
+                icon,
+                React.createElement('span', {}, label)
+            );
+        };
+
+        const NotificationContainer = ({ notifications }) => {
+            return React.createElement('div', { className: "fixed top-4 right-4 z-50 space-y-2" },
+                notifications.map(notification => 
+                    React.createElement(Notification, { key: notification.id, ...notification })
+                )
+            );
+        };
+
+        const Notification = ({ type, message }) => {
+            const types = {
+                success: {
+                    bg: 'bg-green-50 border-green-200',
+                    text: 'text-green-800',
+                    icon: React.createElement(CheckCircle, { className: "w-5 h-5 text-green-500" })
+                },
+                error: {
+                    bg: 'bg-red-50 border-red-200',
+                    text: 'text-red-800',
+                    icon: React.createElement(XCircle, { className: "w-5 h-5 text-red-500" })
+                },
+                warning: {
+                    bg: 'bg-yellow-50 border-yellow-200',
+                    text: 'text-yellow-800',
+                    icon: React.createElement(AlertCircle, { className: "w-5 h-5 text-yellow-500" })
+                }
+            };
+
+            const config = types[type] || types.success;
+
+            return React.createElement('div', {
+                className: `
+                    ${config.bg} ${config.text} border rounded-lg p-4 shadow-lg max-w-md animate-in
+                `
+            },
+                React.createElement('div', { className: "flex items-center space-x-3" },
+                    config.icon,
+                    React.createElement('p', { className: "font-medium" }, message)
+                )
+            );
+        };
+
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
+    </script>
+</body>
+</html>

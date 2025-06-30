@@ -12,6 +12,11 @@
               Сервера
             </a>
           </li>
+          <li class="nav-item me-auto">
+            <a class="nav-link {% if view_name == 'notes:notes-list' %} active {% endif %}" href="{% url 'notes:notes-list' %}">
+              Бэклог
+            </a>
+          </li>
 
           <!-- Блок справа -->
           {% if user.is_authenticated %}

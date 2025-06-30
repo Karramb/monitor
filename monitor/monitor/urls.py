@@ -3,12 +3,17 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.views.generic.edit import CreateView
 from django.urls import include, path, reverse_lazy
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 from users.forms import ArkanCustomUserCreationForm
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls', namespace='core')),
+    path('notes/', include('notes.urls', namespace='notes')),
     path('auth/', include('django.contrib.auth.urls')),
     path(
         'auth/registration/', 
@@ -19,6 +24,8 @@ urlpatterns = [
         ),
         name='registration',
     ),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
 
 if settings.DEBUG:

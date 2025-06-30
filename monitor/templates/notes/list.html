@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Список задач{% endblock %}
+{% block content %}
+
+<!-- Подключаем Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container mt-4">
+  <div class="d-flex mb-3">
+    <select class="form-select me-2" id="filter-group" style="max-width: 200px;">
+      <option value="">Все группы</option>
+    </select>
+
+    <select class="form-select me-2" id="filter-tag" style="max-width: 200px;">
+      <option value="">Все теги</option>
+    </select>
+
+    <button class="btn btn-primary ms-auto" id="btn-create-note" data-bs-toggle="modal" data-bs-target="#modalNote">
+      Создать задачу
+    </button>
+  </div>
+
+  <div id="notes-list" class="list-group"></div>
+</div>
+
+<!-- Модальное окно -->
+<div class="modal fade" id="modalNote" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="formNote">
+        <div class="modal-header">
+          <h5 class="modal-title">Создать задачу</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="note-theme" class="form-label">Тема</label>
+            <input type="text" class="form-control" id="note-theme" required>
+          </div>
+          <div class="mb-3">
+            <label for="note-text" class="form-label">Текст</label>
+            <textarea class="form-control" id="note-text" rows="4" required></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="note-group" class="form-label">Группа</label>
+            <select class="form-select" id="note-group" required>
+              <option value="">Выберите группу</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="note-tags" class="form-label">Теги</label>
+            <select class="form-select" id="note-tags" multiple>
+              <!-- Теги будут добавлены через JS -->
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="note-attachment" class="form-label">Вложение</label>
+            <input type="file" class="form-control" id="note-attachment">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Подключаем необходимые JS-библиотеки -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+// Инициализация API
+const api = axios.create({
+  baseURL: '/api/',
+  headers: {
+    'Authorization': 'Bearer ' + (localStorage.getItem('access_token') || ''),
+    'Content-Type': 'application/json'
+  }
+});
+
+// Загрузка данных при открытии страницы
+document.addEventListener('DOMContentLoaded', async function() {
+  // Загрузка групп и тегов
+  const [groupsRes, tagsRes] = await Promise.all([
+    api.get('groups/'),
+    api.get('tags/')
+  ]);
+  
+  // Заполняем фильтры
+  const filterGroup = document.getElementById('filter-group');
+  const filterTag = document.getElementById('filter-tag');
+  const noteGroup = document.getElementById('note-group');
+  const noteTags = document.getElementById('note-tags');
+  
+  groupsRes.data.results.forEach(group => {
+    filterGroup.innerHTML += `<option value="${group.id}">${group.name}</option>`;
+    noteGroup.innerHTML += `<option value="${group.id}">${group.name}</option>`;
+  });
+  
+  tagsRes.data.results.forEach(tag => {
+    filterTag.innerHTML += `<option value="${tag.id}">${tag.name}</option>`;
+    noteTags.innerHTML += `<option value="${tag.id}">${tag.name}</option>`;
+  });
+  
+  // Загрузка заметок
+  await loadNotes();
+});
+
+// Функция загрузки заметок
+async function loadNotes() {
+  const params = {
+    groups: document.getElementById('filter-group').value,
+    tags: document.getElementById('filter-tag').value
+  };
+  
+  const res = await api.get('notes/', { params });
+  renderNotes(res.data.results);
+}
+
+// Функция отображения заметок
+function renderNotes(notes) {
+  const notesList = document.getElementById('notes-list');
+  
+  if (!notes.length) {
+    notesList.innerHTML = '<div class="alert alert-info">Нет заметок</div>';
+    return;
+  }
+  
+  notesList.innerHTML = notes.map(note => `
+    <div class="list-group-item">
+      <div class="d-flex justify-content-between">
+        <h5>${note.theme}</h5>
+        <small>${new Date(note.pub_date).toLocaleString()}</small>
+      </div>
+      <p>${note.text.substring(0, 100)}...</p>
+      <div>${note.tags.map(t => `<span class="badge bg-secondary me-1">${t.name}</span>`).join('')}</div>
+    </div>
+  `).join('');
+}
+
+// Обработчик отправки формы
+document.getElementById('formNote').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData();
+  formData.append('theme', document.getElementById('note-theme').value);
+  formData.append('text', document.getElementById('note-text').value);
+  formData.append('groups', document.getElementById('note-group').value);
+  
+  Array.from(document.getElementById('note-tags').selectedOptions).forEach(opt => {
+    formData.append('tags', opt.value);
+  });
+  
+  const fileInput = document.getElementById('note-attachment');
+  if (fileInput.files.length > 0) {
+    formData.append('attachment', fileInput.files[0]);
+  }
+  
+  try {
+    await api.post('notes/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    // Закрываем модалку и обновляем список
+    bootstrap.Modal.getInstance(document.getElementById('modalNote')).hide();
+    await loadNotes();
+  } catch (error) {
+    alert('Ошибка при создании заметки');
+    console.error(error);
+  }
+});
+</script>
+
+{% endblock %}
