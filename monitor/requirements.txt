@@ -3,6 +3,7 @@ channels==4.2.2
 channels_redis==4.2.1
 daphne==4.2.0
 Django==4.2.23
+django-cors-headers==4.7.0
 django_bootstrap5 == 25.1
 djangorestframework_simplejwt==5.5.0
 djoser==2.3.1
