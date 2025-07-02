@@ -13,6 +13,8 @@ class SSHHost(models.Model):
     docker_prod = models.CharField(max_length=100)
     button_fast_pull = models.BooleanField(default=False)
     button_pull_reload = models.BooleanField(default=False)
+    last_update = models.DateTimeField(null=True, blank=True)
+    last_commit = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'сервер'
