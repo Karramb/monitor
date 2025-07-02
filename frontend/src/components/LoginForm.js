@@ -24,31 +24,26 @@ const LoginForm = () => {
     setError(null);
     
     try {
-      const response = await login(username, password);
-      if (response.access) {
-        localStorage.setItem('token', response.access);
+      const result = await login(username, password);
+      
+      if (result.success) {
+        // Перенаправляем на главную после успешного входа
         navigate('/');
+        // Обновляем страницу для сброса состояния приложения
+        window.location.reload();
+      } else {
+        setError(result.message || 'Ошибка входа');
       }
     } catch (err) {
-      setError(err.message || 'Ошибка авторизации');
+      setError(err.message || 'Ошибка входа. Проверьте данные.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Paper elevation={3} sx={{ 
-      p: 4, 
-      maxWidth: 400, 
-      mx: 'auto', 
-      mt: 4 
-    }}>
-      <Typography 
-        variant="h5" 
-        align="center" 
-        gutterBottom
-        sx={{ mb: 3 }}
-      >
+    <Paper elevation={3} sx={{ p: 4, maxWidth: 400, mx: 'auto', mt: 4 }}>
+      <Typography variant="h5" align="center" gutterBottom sx={{ mb: 3 }}>
         Вход в систему
       </Typography>
       
@@ -61,7 +56,6 @@ const LoginForm = () => {
       <Box component="form" onSubmit={handleSubmit}>
         <TextField
           label="Имя пользователя"
-          variant="outlined"
           fullWidth
           margin="normal"
           value={username}
@@ -73,7 +67,6 @@ const LoginForm = () => {
         <TextField
           label="Пароль"
           type="password"
-          variant="outlined"
           fullWidth
           margin="normal"
           value={password}

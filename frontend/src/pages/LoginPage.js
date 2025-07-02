@@ -1,13 +1,12 @@
-// src/pages/LoginPage.js
 import React from 'react';
 import LoginForm from '../components/LoginForm';
-import { Container } from '@mui/material';
+import { Box } from '@mui/material';
 
 const LoginPage = () => {
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
+    <Box sx={{ mt: 8 }}>
       <LoginForm />
-    </Container>
+    </Box>
   );
 };
 
