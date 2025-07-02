@@ -1,24 +1,11 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.views.generic.edit import CreateView
-from django.urls import include, path, reverse_lazy
-
-from users.forms import ArkanCustomUserCreationForm
+from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('core.urls', namespace='core')),
     path('api/', include('api.urls', namespace='api')),
-    path(
-        'auth/registration/', 
-        CreateView.as_view(
-            template_name='registration/registration_form.html',
-            form_class=ArkanCustomUserCreationForm,
-            success_url=reverse_lazy('login'),
-        ),
-        name='registration',
-    ),
 ]
 
 if settings.DEBUG:

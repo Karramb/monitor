@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -20,7 +19,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ('username', 'email', 'password', 'password2')
         extra_kwargs = {
-            'email': {'required': True}  # Если email обязателен
+            'email': {'required': True}
         }
 
     def validate(self, attrs):
