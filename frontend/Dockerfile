@@ -1,20 +1,14 @@
-# Stage 1: сборка приложения
+# Stage 1: Сборка
 FROM node:21.7.1-alpine AS builder
-
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-COPY . ./
+COPY . .
 RUN npm run build
 
-# Stage 2: запуск через serve (легковесный HTTP-сервер)
+# Stage 2: Запуск
 FROM node:21.7.1-alpine
-
-# Устанавливаем serve глобально
 RUN npm install -g serve
-
 WORKDIR /app
-COPY --from=builder /app/build ./build
-
-# Запускаем сервер на порту 3000
+COPY --from=builder /app/result_build ./build
 CMD ["serve", "-s", "build", "-l", "3000"]
