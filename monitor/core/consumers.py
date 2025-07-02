@@ -5,7 +5,9 @@ import logging
 import os
 import traceback
 
+from asgiref.sync import sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from django.utils import timezone
 
 from core.models import SSHHost
 
@@ -45,13 +47,16 @@ class MonitorConsumer(AsyncWebsocketConsumer):
     async def monitor_loop(self, ssh_host):
         while self.is_running:
             try:
+                ssh_host = await sync_to_async(type(ssh_host).objects.get)(pk=ssh_host.pk)
                 result = await self.get_docker_compose_status(
                     ssh_host,
                     username=os.getenv('SSH_USERNAME'),
                     password=os.getenv('SSH_PASSWORD')
                 )
                 await self.send(json.dumps({
-                    'config_status': result['config_status']
+                    'config_status': result['config_status'],
+                    'last_update': ssh_host.last_update.isoformat() if ssh_host.last_update else None,
+                    'last_commit': ssh_host.last_commit.isoformat() if ssh_host.last_commit else None
                 }))
             except asyncio.CancelledError:
                 break
@@ -264,6 +269,8 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'action': 'fast_pull_completed',
                     'result': result.stdout
                 }))
+                ssh_host.last_update = timezone.now()
+                await sync_to_async(ssh_host.save)()
 
                 if result.exit_status != 0:
                     raise Exception(result.stderr or "Fast pull failed")
@@ -330,6 +337,8 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'action': 'pull_with_reload_completed',
                     'result': result.stdout
                 }))
+                ssh_host.last_update = timezone.now()
+                await sync_to_async(ssh_host.save)()
                 logger.debug("pull_with_reload completed successfully.")
                 return "All operations completed successfully"
 
