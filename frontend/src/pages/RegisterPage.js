@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../api';
-import { TextField, Button, Container, Typography, Box } from '@mui/material';
+import { 
+  TextField, 
+  Button, 
+  Paper, 
+  Box, 
+  Typography,
+  CircularProgress,
+  Alert,
+  Link
+} from '@mui/material';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -10,7 +19,8 @@ const RegisterPage = () => {
     password: '',
     password2: ''
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -22,76 +32,112 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.password2) {
-      setError('Пароли не совпадают');
-      return;
-    }
+    setLoading(true);
+    setError(null);
+    
     try {
-      await register(formData);
-      navigate('/login');
+      const response = await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        password2: formData.password2  // Добавьте это поле
+      });
+      console.log('Registration success:', response);
+      navigate('/auth/login/');
     } catch (err) {
-      setError('Ошибка регистрации');
+      console.error('Registration error:', err);
+      setError(
+        err.message || 
+        err.response?.data?.errors || 
+        'Ошибка регистрации. Проверьте введенные данные.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography component="h1" variant="h5">
-          Регистрация
-        </Typography>
-        {error && <Typography color="error">{error}</Typography>}
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Имя пользователя"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Пароль"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            label="Подтвердите пароль"
-            name="password2"
-            type="password"
-            value={formData.password2}
-            onChange={handleChange}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2 }}
-          >
-            Зарегистрироваться
-          </Button>
+    <Paper elevation={3} sx={{ 
+      p: 4, 
+      maxWidth: 400, 
+      mx: 'auto', 
+      mt: 4 
+    }}>
+      <Typography variant="h5" align="center" gutterBottom sx={{ mb: 3 }}>
+        Регистрация
+      </Typography>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box component="form" onSubmit={handleSubmit}>
+        <TextField
+          label="Имя пользователя"
+          name="username"
+          fullWidth
+          margin="normal"
+          value={formData.username}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Email"
+          name="email"
+          type="email"
+          fullWidth
+          margin="normal"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Пароль"
+          name="password"
+          type="password"
+          fullWidth
+          margin="normal"
+          value={formData.password}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        
+        <TextField
+          label="Подтвердите пароль"
+          name="password2"
+          type="password"
+          fullWidth
+          margin="normal"
+          value={formData.password2}
+          onChange={handleChange}
+          required
+          disabled={loading}
+        />
+        
+        <Button 
+          type="submit" 
+          variant="contained" 
+          fullWidth 
+          sx={{ mt: 3 }}
+          disabled={loading}
+        >
+          {loading ? <CircularProgress size={24} /> : 'Зарегистрироваться'}
+        </Button>
+        
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Link href="/auth/login/" variant="body2">
+            Уже есть аккаунт? Войти
+          </Link>
         </Box>
       </Box>
-    </Container>
+    </Paper>
   );
 };
 

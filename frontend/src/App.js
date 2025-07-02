@@ -1,43 +1,30 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import HostListPage from './pages/HostListPage';
-import HostDetailPage from './pages/HostDetailPage';
+import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import HostListPage from './pages/HostListPage';
 import Layout from './components/Layout';
-import { ensureCsrfToken } from './api/index';
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+const theme = createTheme();
 
 function App() {
-  useEffect(() => {
-    ensureCsrfToken().catch(error => {
-      console.error('Failed to get CSRF token:', error);
-    });
-  }, []);
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <Navbar /> {/* Шапка теперь вне Routes */}
         <Routes>
+          {/* Общие страницы с Layout */}
           <Route element={<Layout />}>
             <Route path="/" element={<HostListPage />} />
-            <Route path="/hosts/:id" element={<HostDetailPage />} />
           </Route>
+          
+          {/* Страницы без дополнительного Layout */}
           <Route path="/auth/login/" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/registration/" element={<RegisterPage />} />
         </Routes>
       </Router>
     </ThemeProvider>
