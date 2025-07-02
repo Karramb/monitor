@@ -22,7 +22,7 @@ function App() {
           <Route path="/" element={<HostListPage />} />
           <Route path="/hosts/:id" element={<HostDetailPage />} />
         </Route>
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/login/" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Routes>
     </Router>

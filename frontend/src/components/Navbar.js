@@ -8,7 +8,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
-    navigate('/login');
+    navigate('/auth/login');
   };
 
   return (
@@ -26,10 +26,10 @@ const Navbar = () => {
             </Button>
           ) : (
             <>
-              <Button color="inherit" component={Link} to="/login">
+              <Button color="inherit" component={Link} to="/auth/login/">
                 Войти
               </Button>
-              <Button color="inherit" component={Link} to="/register">
+              <Button color="inherit" component={Link} to="/auth/registration/">
                 Регистрация
               </Button>
             </>
