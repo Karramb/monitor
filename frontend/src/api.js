@@ -36,12 +36,22 @@ const getHeaders = (isPost = false) => {
 };
 
 export const getHosts = () => {
+  console.log('Fetching hosts from:', baseURL + 'hosts/');  // Логируем URL
   return fetch(baseURL + 'hosts/', {
     headers: getHeaders(),
-    credentials: 'include', // важно для кук
-  }).then((res) => {
-    if (!res.ok) throw new Error(res.statusText);
+    credentials: 'include',
+  })
+  .then((res) => {
+    console.log('Response status:', res.status);  // Логируем статус
+    if (!res.ok) {
+      console.error('Response error:', res.statusText);  // Логируем ошибку
+      throw new Error(res.statusText);
+    }
     return res.json();
+  })
+  .then(data => {
+    console.log('Response data:', data);  // Логируем данные
+    return data;
   });
 };
 
@@ -67,16 +77,20 @@ export const runScript = (hostId, scriptName) => {
   });
 };
 
-export const login = (username, password) => {
-  return fetch(baseURL + 'auth/login/', {
+export const login = async (username, password) => {
+  const response = await fetch(`${baseURL}auth/login/`, {
     method: 'POST',
-    headers: getHeaders(true),
-    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ username, password }),
-  }).then((res) => {
-    if (!res.ok) throw new Error(res.statusText);
-    return res.json();
   });
+
+  if (!response.ok) {
+    throw new Error('Login failed');
+  }
+
+  return response.json();
 };
 
 export const register = (userData) => {

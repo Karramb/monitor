@@ -10,7 +10,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls', namespace='core')),
     path('api/', include('api.urls', namespace='api')),
-    path('auth/', include('django.contrib.auth.urls')),
     path(
         'auth/registration/', 
         CreateView.as_view(
