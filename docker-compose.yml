@@ -11,17 +11,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  monitor:
-    build: ./monitor
-    container_name: monitor
-    restart: always
-    env_file:
-      - .env
-    ports:
-      - "4000:8000"
-    volumes:
-      - ./monitor:/app
-  
   redis:
     image: redis:latest
     container_name: monitor_redis
@@ -30,6 +19,34 @@ services:
       - "6378:6379"
     volumes:
       - redis_data:/data
+
+  monitor:
+    build: ./monitor
+    container_name: monitor
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./monitor:/app
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - monitor
+    ports:
+      - "4000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
 volumes:
   redis_data:
