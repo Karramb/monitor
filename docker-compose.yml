@@ -33,6 +33,7 @@ services:
       - "8000:8000"
     volumes:
       - ./monitor:/app
+      - ./frontend/build:/app/build
 
   frontend:
     build: ./frontend
@@ -45,8 +46,8 @@ services:
     ports:
       - "4000:3000"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src  # Только исходники
+      - ./frontend/public:/app/public  # Только статика
 
 volumes:
   redis_data:
