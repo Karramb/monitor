@@ -203,3 +203,69 @@ export const checkAuth = () => {
 export const logout = () => {
   localStorage.removeItem('token');
 };
+
+// Получение списка бэклогов
+export const getBacklogs = async () => {
+  try {
+    const response = await fetch(`${baseURL}backlog/`, {
+      headers: getHeaders(),
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error("Response is not JSON");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Ошибка загрузки бэклога:', error);
+    throw error;
+  }
+};
+
+// Получение списка групп
+export const getGroups = async () => {
+  try {
+    const response = await fetch(`${baseURL}groups/`, {
+      headers: getHeaders(),
+      credentials: 'include',
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.detail || 'Не удалось загрузить группы');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Ошибка загрузки групп:', error);
+    throw error;
+  }
+};
+
+// Получение списка тегов
+export const getTags = async () => {
+  try {
+    const response = await fetch(`${baseURL}tags/`, {
+      headers: getHeaders(),
+      credentials: 'include',
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.detail || 'Не удалось загрузить теги');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Ошибка загрузки тегов:', error);
+    throw error;
+  }
+};

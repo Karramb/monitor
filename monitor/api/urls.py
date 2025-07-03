@@ -1,7 +1,21 @@
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView
-from api.views import CsrfTokenView, GitlabWebhookView, RegistrationAPIView, SSHHostListAPIView, SSHHostDetailAPIView
+from rest_framework.routers import DefaultRouter
+from api.views import (
+    BacklogViewSet, 
+    CsrfTokenView, 
+    GitlabWebhookView, 
+    RegistrationAPIView, 
+    SSHHostListAPIView, 
+    SSHHostDetailAPIView,
+    GroupViewSet,
+    TagViewSet
+)
 
+router = DefaultRouter()
+router.register(r'backlog', BacklogViewSet, basename='backlog')
+router.register(r'groups', GroupViewSet, basename='groups')
+router.register(r'tags', TagViewSet, basename='tags')
 
 app_name = 'api'
 
@@ -12,4 +26,5 @@ urlpatterns = [
     path('auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/csrf/', CsrfTokenView.as_view(), name='csrf-token'),
     path('auth/registration/', RegistrationAPIView.as_view(), name='api-registration'),
+    path('', include(router.urls)),  # Подключаем роутер с API для бэклога, групп и тегов
 ]

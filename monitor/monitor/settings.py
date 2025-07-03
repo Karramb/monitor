@@ -17,8 +17,6 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split()
 
 AUTH_USER_MODEL = 'users.ArkanUser'
 
-# Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -30,7 +28,10 @@ INSTALLED_APPS = [
     'django_bootstrap5',
     'channels',
     'corsheaders',
+    'rest_framework',
+    
     'api',
+    'backlog',
     'core',
     'users',
 ]
@@ -109,10 +110,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
-
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'ru-RU'
 

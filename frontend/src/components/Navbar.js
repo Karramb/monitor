@@ -6,13 +6,15 @@ const Navbar = () => {
   const navigate = useNavigate();
   const isAuthenticated = !!localStorage.getItem('token');
 
+  console.log('Navbar rendered. Auth:', isAuthenticated); // Добавим лог для отладки
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/auth/login/');
   };
 
   return (
-    <AppBar position="static">
+    <AppBar position="static" style={{ border: '2px solid red' }}>
       <Toolbar>
         <Typography variant="h6" component={Link} to="/" sx={{ 
           flexGrow: 1, 
@@ -23,9 +25,19 @@ const Navbar = () => {
         </Typography>
         
         {isAuthenticated ? (
-          <Button color="inherit" onClick={handleLogout}>
-            Выйти
-          </Button>
+          <>
+            <Button 
+              color="inherit" 
+              component={Link} 
+              to="/backlog"
+              sx={{ marginRight: 2 }}
+            >
+              Бэклог
+            </Button>
+            <Button color="inherit" onClick={handleLogout}>
+              Выйти
+            </Button>
+          </>
         ) : (
           <>
             <Button color="inherit" component={Link} to="/auth/login/">
