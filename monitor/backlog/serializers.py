@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from backlog.models import Backlog, Group, Tag
+from backlog.models import Backlog, Comment, Group, Tag
+from users.serializers import UserSerializer
 
 
 User = get_user_model()
@@ -26,4 +27,12 @@ class BacklogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Backlog
-        fields = ['author', 'groups', 'tags', 'theme', 'text']
+        fields = ['id', 'author', 'groups', 'tags', 'theme', 'text', 'status']
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = UserSerializer()
+    
+    class Meta:
+        model = Comment
+        fields = ['id', 'text', 'author', 'created_at']
