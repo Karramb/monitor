@@ -4,11 +4,13 @@ import HostCard from '../components/HostCard';
 import { Typography } from '@mui/material';
 
 const HostListPage = () => {
+  console.log('🏁 HostListPage отрендерен');
   const [hosts, setHosts] = useState(null); // Изначально null вместо []
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log('Компонент HostListPage смонтирован');
     const fetchHosts = async () => {
       try {
         await getCsrfToken();

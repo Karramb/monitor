@@ -38,16 +38,10 @@ services:
   frontend:
     build: ./frontend
     container_name: frontend
-    restart: always
-    env_file:
-      - .env
-    depends_on:
-      - monitor
     ports:
       - "4000:3000"
-    volumes:
-      - ./frontend/src:/app/src  # Только исходники
-      - ./frontend/public:/app/public  # Только статика
+    depends_on:
+      - monitor
 
 volumes:
   redis_data:
