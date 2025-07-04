@@ -6,6 +6,9 @@ const Navbar = () => {
   const navigate = useNavigate();
   const isAuthenticated = !!localStorage.getItem('token');
 
+  console.log('Is authenticated:', isAuthenticated);
+  console.log('Token:', localStorage.getItem('token'));
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/auth/login/');
@@ -23,9 +26,19 @@ const Navbar = () => {
         </Typography>
         
         {isAuthenticated ? (
-          <Button color="inherit" onClick={handleLogout}>
-            Выйти
-          </Button>
+          <>
+            <Button 
+              color="inherit" 
+              component={Link} 
+              to="/backlog"
+              sx={{ mr: 1 }}
+            >
+              Бэклог
+            </Button>
+            <Button color="inherit" onClick={handleLogout}>
+              Выйти
+            </Button>
+          </>
         ) : (
           <>
             <Button color="inherit" component={Link} to="/auth/login/">

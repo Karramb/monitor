@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
     'api',
+    'backlog',
     'core',
     'users',
 ]
@@ -176,33 +177,13 @@ LOGIN_REDIRECT_URL = 'core:host-list'
 
 LOGIN_URL = 'login'
 
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://frontend:3000',
-    'http://localhost:4000',
-    'http://127.0.0.1:4000',
-    'http://frontend:4000',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://monitor:8000',
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://frontend:3000',
-    'http://localhost:4000',
-    'http://127.0.0.1:4000',
-    'http://frontend:4000',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://monitor:8000',
-]
-
-CORS_ALLOW_ALL_ORIGINS = False
-
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # Для разработки, в production укажите конкретные домены
+
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'None'
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
