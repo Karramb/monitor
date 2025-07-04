@@ -4,7 +4,9 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
-import HostListPage from './pages/HostListPage'; // Заменили HomePage на HostListPage
+import HostListPage from './pages/HostListPage';
+import BacklogPage from './pages/BacklogPage';
+import BacklogItemPage from './pages/BacklogItemPage';
 import Layout from './components/Layout';
 
 const theme = createTheme();
@@ -16,7 +18,11 @@ function App() {
       <Router>
         <Navbar />
         <Routes>
-          <Route path="/" element={<Layout><HostListPage /></Layout>} />
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HostListPage />} />
+            <Route path="backlog" element={<BacklogPage />} />
+            <Route path="backlog/:id" element={<BacklogItemPage />} />
+          </Route>
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
