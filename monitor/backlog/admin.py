@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from backlog.models import Backlog, Group, Tag
+from backlog.models import Backlog, Comment, Group, Tag
 
 
 @admin.register(Group)
@@ -42,4 +42,24 @@ class BacklogAdmin(admin.ModelAdmin):
     list_filter = (
         'theme',
         'author',
+    )
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = (
+        'text',
+        'author',
+        'created_at',
+        'backlog'
+    )
+    search_fields = (
+        'text',
+        'author',
+        'backlog'
+    )
+    list_filter = (
+        'text',
+        'author',
+        'created_at',
+        'backlog'
     )
