@@ -41,16 +41,23 @@ const BacklogItemPage = () => {
   const [task, setTask] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [commentFile, setCommentFile] = useState(null);
   const [groupsMap, setGroupsMap] = useState({});
   const [tagsMap, setTagsMap] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Новое состояние для редактирования темы
-  const [isEditingTheme, setIsEditingTheme] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [editedTheme, setEditedTheme] = useState('');
+  const statusLabels = {
+    Create: 'Создана',
+    Accepted: 'Принята',
+    In_test: 'В тесте',
+    Done: 'Выполнена',
+  };
+  const [editedText, setEditedText] = useState('');
+  const [editedStatus, setEditedStatus] = useState('');
+  const [editedAttachment, setEditedAttachment] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,7 +72,8 @@ const BacklogItemPage = () => {
 
         setTask(taskRes.data);
         setEditedTheme(taskRes.data.theme);
-        setStatus(taskRes.data.status);
+        setEditedText(taskRes.data.text);
+        setEditedStatus(taskRes.data.status);
         setComments(commentsRes.data);
         setCurrentUser(userRes.data);
 
@@ -80,7 +88,6 @@ const BacklogItemPage = () => {
 
         setGroupsMap(groups);
         setTagsMap(tags);
-
       } catch (error) {
         console.error('Ошибка загрузки данных:', error);
         navigate('/backlog');
@@ -92,27 +99,16 @@ const BacklogItemPage = () => {
     fetchData();
   }, [id, navigate]);
 
-  const handleStatusChange = async () => {
+  const handleSaveTask = async () => {
     try {
-      const response = await axios.patch(
-        `/api/backlog/${id}/`,
-        { status },
-        { headers: getAuthHeaders() }
-      );
-      setTask(response.data);
-    } catch (error) {
-      console.error('Ошибка обновления статуса:', error);
-    }
-  };
+      const formData = new FormData();
+      formData.append('theme', editedTheme);
+      formData.append('text', editedText);
+      formData.append('status', editedStatus);
+      if (editedAttachment) {
+        formData.append('attachment', editedAttachment);
+      }
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('attachment', file);
-
-    try {
       const response = await axios.patch(
         `/api/backlog/${id}/`,
         formData,
@@ -122,10 +118,20 @@ const BacklogItemPage = () => {
           }
         }
       );
+
       setTask(response.data);
+      setIsEditing(false);
     } catch (error) {
-      console.error('Ошибка загрузки файла:', error);
+      console.error('Ошибка сохранения задачи:', error);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedTheme(task.theme);
+    setEditedText(task.text);
+    setEditedStatus(task.status);
+    setEditedAttachment(null);
+    setIsEditing(false);
   };
 
   const handleCommentFileChange = (e) => {
@@ -156,22 +162,7 @@ const BacklogItemPage = () => {
       setNewComment('');
       setCommentFile(null);
     } catch (error) {
-      console.error('Ошибка:', error.response?.data);
-    }
-  };
-
-  // Новая функция для сохранения темы
-  const handleSaveTheme = async () => {
-    try {
-      const response = await axios.patch(
-        `/api/backlog/${id}/`,
-        { theme: editedTheme },
-        { headers: getAuthHeaders() }
-      );
-      setTask(response.data);
-      setIsEditingTheme(false);
-    } catch (error) {
-      console.error('Ошибка сохранения темы:', error);
+      console.error('Ошибка при отправке комментария:', error.response?.data);
     }
   };
 
@@ -190,74 +181,49 @@ const BacklogItemPage = () => {
   const isAuthor = currentUser && task.author === currentUser.username;
 
   return (
-    <Box sx={{ p: 3, width: '100%' }}>
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        mb: 3,
-        pb: 2,
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        {/* Редактируемая тема */}
-        {isEditingTheme ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        {isEditing ? (
+          <>
             <TextField
+              label="Тема"
               value={editedTheme}
               onChange={(e) => setEditedTheme(e.target.value)}
               size="small"
-              sx={{ minWidth: 300 }}
+              sx={{ flex: 1, mr: 2 }}
             />
-            <Button size="small" variant="contained" onClick={handleSaveTheme}>
-              Сохранить
-            </Button>
-            <Button size="small" onClick={() => { setIsEditingTheme(false); setEditedTheme(task.theme); }}>
-              Отмена
-            </Button>
-          </Box>
+            <Button variant="contained" size="small" onClick={handleSaveTask}>Сохранить</Button>
+            <Button size="small" onClick={handleCancelEdit}>Отмена</Button>
+          </>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <>
             <Typography variant="h5" sx={{ fontWeight: 500 }}>
               {task.theme}
             </Typography>
             {isAuthor && (
-              <Button size="small" onClick={() => setIsEditingTheme(true)}>
+              <Button size="small" onClick={() => setIsEditing(true)}>
                 Редактировать
               </Button>
             )}
-          </Box>
+          </>
         )}
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            select
-            size="small"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            sx={{ minWidth: 150 }}
-          >
-            <MenuItem value="Create">Создана</MenuItem>
-            <MenuItem value="Accepted">Принята</MenuItem>
-            <MenuItem value="In_test">В тесте</MenuItem>
-            <MenuItem value="Done">Выполнена</MenuItem>
-          </TextField>
-          <Button
-            variant="contained"
-            size="small"
-            onClick={handleStatusChange}
-          >
-            Сохранить
-          </Button>
-        </Box>
       </Box>
 
-      <Paper sx={{ p: 3, mb: 3, border: '1px solid #e0e0e0' }}>
+      <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>Описание</Typography>
-        <Typography paragraph sx={{ whiteSpace: 'pre-line' }}>
-          {task.text}
-        </Typography>
+        {isEditing ? (
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
+            value={editedText}
+            onChange={(e) => setEditedText(e.target.value)}
+          />
+        ) : (
+          <Typography paragraph sx={{ whiteSpace: 'pre-line' }}>{task.text}</Typography>
+        )}
 
-        <Box sx={{ mt: 3, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <Box sx={{ mt: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           <Box>
             <Typography variant="subtitle1" gutterBottom>Группа:</Typography>
             <Chip label={groupsMap[task.groups]?.name || '—'} size="small" />
@@ -273,11 +239,7 @@ const BacklogItemPage = () => {
                     key={tag.id}
                     label={tag.name}
                     size="small"
-                    sx={{
-                      backgroundColor: tag.color,
-                      color: '#fff',
-                      fontSize: '0.7rem'
-                    }}
+                    sx={{ backgroundColor: tag.color, color: '#fff', fontSize: '0.7rem' }}
                   />
                 ) : null;
               })}
@@ -285,40 +247,65 @@ const BacklogItemPage = () => {
           </Box>
 
           <Box>
-            <Typography variant="subtitle1" gutterBottom>Файл:</Typography>
-            {task.attachment ? (
-              <Button
+            <Typography variant="subtitle1" gutterBottom>Статус:</Typography>
+            {isEditing ? (
+              <TextField
+                select
                 size="small"
-                onClick={() => window.open(task.attachment)}
+                value={editedStatus}
+                onChange={(e) => setEditedStatus(e.target.value)}
               >
-                Скачать
-              </Button>
+                <MenuItem value="Create">Создана</MenuItem>
+                <MenuItem value="Accepted">Принята</MenuItem>
+                <MenuItem value="In_test">В тесте</MenuItem>
+                <MenuItem value="Done">Выполнена</MenuItem>
+              </TextField>
             ) : (
-              isAuthor && (
-                <>
-                  <input
-                    type="file"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload">
-                    <Button
-                      component="span"
-                      size="small"
-                      startIcon={<AttachFileIcon />}
-                    >
-                      Редактировать
-                    </Button>
-                  </label>
-                </>
+              <Typography>{statusLabels[task.status] || task.status}</Typography>
+            )}
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle1" gutterBottom>Файл:</Typography>
+            {isEditing ? (
+              <>
+                {task.attachment && !editedAttachment && (
+                  <Button
+                    size="small"
+                    onClick={() => window.open(task.attachment)}
+                  >
+                    Текущий файл
+                  </Button>
+                )}
+                <input
+                  type="file"
+                  onChange={(e) => setEditedAttachment(e.target.files[0])}
+                  style={{ display: 'none' }}
+                  id="edit-attachment"
+                />
+                <label htmlFor="edit-attachment">
+                  <Button component="span" size="small" startIcon={<AttachFileIcon />}>
+                    {editedAttachment ? 'Заменить файл' : 'Прикрепить файл'}
+                  </Button>
+                </label>
+                {editedAttachment && (
+                  <Typography variant="body2">{editedAttachment.name}</Typography>
+                )}
+              </>
+            ) : (
+              task.attachment ? (
+                <Button size="small" onClick={() => window.open(task.attachment)}>
+                  Скачать
+                </Button>
+              ) : (
+                <Typography variant="body2" color="text.secondary">Нет файла</Typography>
               )
             )}
           </Box>
         </Box>
       </Paper>
 
-      <Paper sx={{ p: 3, border: '1px solid #e0e0e0' }}>
+      <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>Комментарии</Typography>
 
         <Box sx={{ mb: 3 }}>
