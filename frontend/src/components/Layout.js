@@ -4,7 +4,7 @@ import { Container } from '@mui/material';
 
 const Layout = () => {
   return (
-    <Container maxWidth="lg" sx={{ py: 3, mt: 2 }}>
+    <Container maxWidth="{false}" sx={{ py: 3, mt: 2 }}>
       <Outlet />
     </Container>
   );

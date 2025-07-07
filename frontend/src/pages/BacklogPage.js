@@ -1,6 +1,5 @@
-// BacklogPage.js
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -14,8 +13,10 @@ import {
   MenuItem,
   Box,
   Typography,
-  Skeleton
+  Skeleton,
+  Button
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 
 const BacklogPage = () => {
@@ -62,26 +63,57 @@ const BacklogPage = () => {
     );
   });
 
+  const getStatusInfo = (status) => {
+    switch(status) {
+      case 'Create': return { text: 'Создана', color: '#000000', bgColor: '#ffffff' };
+      case 'Accepted': return { text: 'Принята', color: '#000000', bgColor: '#fff2cc' };
+      case 'In_test': return { text: 'В тесте', color: '#000000', bgColor: '#fce5cd' };
+      case 'Done': return { text: 'Выполнена', color: '#000000', bgColor: '#d9ead3' };
+      default: return { text: status, color: '#000000', bgColor: '#ffffff' };
+    }
+  };
+
   return (
     <Box sx={{ 
-      p: 4,
-      maxWidth: '100%',
-      width: '100vw',
-      margin: 0,
+      width: '100%',
+      p: 2,
+      backgroundColor: '#f5f5f5',
       minHeight: '100vh'
     }}>
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 500, mb: 3 }}>Бэклог задач</Typography>
-      
       <Box sx={{ 
-        display: 'flex', 
-        gap: 2, 
-        mb: 3,
-        '& .MuiTextField-root': { 
-          minWidth: 180,
-          '& .MuiInputBase-root': {
-            height: 40
-          }
-        }
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        mb: 2,
+        p: 2,
+        backgroundColor: '#ffffff',
+        borderRadius: 1,
+        boxShadow: '0px 1px 3px rgba(0,0,0,0.1)'
+      }}>
+        <Typography variant="h6" sx={{ fontWeight: 500 }}>Бэклог задач</Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />}
+          component={Link}
+          to="/backlog/new"
+          sx={{
+            backgroundColor: '#4472c4',
+            color: '#ffffff',
+            '&:hover': { backgroundColor: '#3a62b0' }
+          }}
+        >
+          Создать задачу
+        </Button>
+      </Box>
+
+      <Box sx={{ 
+        display: 'flex',
+        gap: 2,
+        mb: 2,
+        p: 2,
+        backgroundColor: '#ffffff',
+        borderRadius: 1,
+        boxShadow: '0px 1px 3px rgba(0,0,0,0.1)'
       }}>
         <TextField
           select
@@ -90,11 +122,13 @@ const BacklogPage = () => {
           value={filters.status}
           onChange={handleFilterChange}
           size="small"
+          sx={{ minWidth: 150, backgroundColor: '#ffffff' }}
         >
-          <MenuItem value="">Все</MenuItem>
-          <MenuItem value="open">Открыта</MenuItem>
-          <MenuItem value="in_progress">В работе</MenuItem>
-          <MenuItem value="closed">Закрыта</MenuItem>
+          <MenuItem value="">Все статусы</MenuItem>
+          <MenuItem value="Create">Создана</MenuItem>
+          <MenuItem value="Accepted">Принята</MenuItem>
+          <MenuItem value="In_test">В тесте</MenuItem>
+          <MenuItem value="Done">Выполнена</MenuItem>
         </TextField>
 
         <TextField
@@ -104,12 +138,11 @@ const BacklogPage = () => {
           value={filters.group}
           onChange={handleFilterChange}
           size="small"
+          sx={{ minWidth: 150, backgroundColor: '#ffffff' }}
         >
-          <MenuItem value="">Все</MenuItem>
+          <MenuItem value="">Все группы</MenuItem>
           {groups.map(group => (
-            <MenuItem key={group.id} value={group.id}>
-              {group.name}
-            </MenuItem>
+            <MenuItem key={group.id} value={group.id}>{group.name}</MenuItem>
           ))}
         </TextField>
 
@@ -120,8 +153,9 @@ const BacklogPage = () => {
           value={filters.tag}
           onChange={handleFilterChange}
           size="small"
+          sx={{ minWidth: 150, backgroundColor: '#ffffff' }}
         >
-          <MenuItem value="">Все</MenuItem>
+          <MenuItem value="">Все теги</MenuItem>
           {tags.map(tag => (
             <MenuItem key={tag.id} value={tag.id}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -139,114 +173,112 @@ const BacklogPage = () => {
         </TextField>
       </Box>
 
-      <TableContainer component={Paper} sx={{ 
-        boxShadow: 'none',
-        border: '1px solid',
-        borderColor: 'divider',
-        '& .MuiTableCell-root': {
-          py: 1,
-          px: 2,
-          fontSize: '0.875rem'
-        }
+      <Paper sx={{ 
+        width: '100%',
+        overflow: 'auto',
+        borderRadius: 1,
+        boxShadow: '0px 1px 3px rgba(0,0,0,0.1)'
       }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ 
-              '& .MuiTableCell-root': { 
-                fontWeight: 500,
-                backgroundColor: 'action.hover'
-              }
-            }}>
-              <TableCell width={60}>ID</TableCell>
-              <TableCell>Тема</TableCell>
-              <TableCell width={150}>Группа</TableCell>
-              <TableCell width={200}>Теги</TableCell>
-              <TableCell width={120}>Статус</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              Array(5).fill().map((_, index) => (
-                <TableRow key={`skeleton-${index}`}>
-                  <TableCell><Skeleton /></TableCell>
-                  <TableCell><Skeleton /></TableCell>
-                  <TableCell><Skeleton /></TableCell>
-                  <TableCell><Skeleton /></TableCell>
-                  <TableCell><Skeleton /></TableCell>
-                </TableRow>
-              ))
-            ) : (
-              filteredTasks.map(task => (
-                <TableRow key={task.id} hover>
-                  <TableCell>{task.id}</TableCell>
-                  <TableCell>
-                    <Link 
-                      to={`/backlog/${task.id}`} 
-                      style={{ 
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        fontWeight: 500
-                      }}
-                    >
-                      {task.theme}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={task.groups.name} 
-                      size="small" 
-                      sx={{ 
-                        height: 24,
-                        fontSize: '0.75rem'
-                      }} 
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {task.tags.map(tag => (
-                        <Chip
-                          key={tag.id}
-                          label={tag.name}
-                          size="small"
-                          sx={{ 
-                            backgroundColor: tag.color,
-                            color: 'white',
-                            height: 22,
-                            fontSize: '0.7rem',
-                            '& .MuiChip-label': {
-                              px: 1
-                            }
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ 
-                      display: 'inline-block',
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 1,
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      color: task.status === 'open' ? 'info.main' : 
-                            task.status === 'in_progress' ? 'warning.main' : 
-                            'success.main',
-                      bgcolor: task.status === 'open' ? 'info.light' : 
-                              task.status === 'in_progress' ? 'warning.light' : 
-                              'success.light'
-                    }}>
-                      {task.status === 'open' && 'Открыта'}
-                      {task.status === 'in_progress' && 'В работе'}
-                      {task.status === 'closed' && 'Закрыта'}
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+        <TableContainer>
+          <Table sx={{ 
+            minWidth: 800,
+            '& .MuiTableCell-root': {
+              border: '1px solid #e0e0e0',
+              py: '6px',
+              px: '12px',
+              fontSize: '0.875rem',
+              height: '36px'
+            },
+            '& .MuiTableHead-root .MuiTableCell-root': {
+              backgroundColor: '#f2f2f2',
+              fontWeight: 500,
+              borderBottom: '2px solid #e0e0e0'
+            },
+            '& .MuiTableRow-root:hover': {
+              backgroundColor: '#f5f9ff'
+            }
+          }}>
+            <TableHead>
+              <TableRow>
+                <TableCell width={60} sx={{ fontWeight: 600 }}>ID</TableCell>
+                <TableCell minWidth={300} sx={{ fontWeight: 600 }}>Тема</TableCell>
+                <TableCell width={150} sx={{ fontWeight: 600 }}>Группа</TableCell>
+                <TableCell width={200} sx={{ fontWeight: 600 }}>Теги</TableCell>
+                <TableCell width={120} sx={{ fontWeight: 600 }}>Статус</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                Array(10).fill().map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton height={24} /></TableCell>
+                    <TableCell><Skeleton height={24} /></TableCell>
+                    <TableCell><Skeleton height={24} /></TableCell>
+                    <TableCell><Skeleton height={24} /></TableCell>
+                    <TableCell><Skeleton height={24} /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                filteredTasks.map(task => (
+                  <TableRow key={task.id} hover>
+                    <TableCell>{task.id}</TableCell>
+                    <TableCell>
+                      <Link 
+                        to={`/backlog/${task.id}`}
+                        style={{ 
+                          color: '#2a5885',
+                          textDecoration: 'none',
+                          fontWeight: 500,
+                          '&:hover': { textDecoration: 'underline' }
+                        }}
+                      >
+                        {task.theme}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{groups.find(g => g.id === task.groups)?.name || '—'}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {task.tags.map(tagId => {
+                          const tagObj = tags.find(t => t.id === tagId);
+                          return tagObj ? (
+                            <Chip
+                              key={tagObj.id}
+                              label={tagObj.name}
+                              size="small"
+                              sx={{ 
+                                backgroundColor: tagObj.color,
+                                color: '#fff',
+                                fontSize: '0.7rem',
+                                height: '22px',
+                                borderRadius: '3px'
+                              }}
+                            />
+                          ) : null;
+                        })}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ 
+                        display: 'inline-block',
+                        px: 1,
+                        py: 0.3,
+                        borderRadius: '3px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        backgroundColor: getStatusInfo(task.status).bgColor,
+                        color: getStatusInfo(task.status).color,
+                        border: '1px solid #d0d0d0'
+                      }}>
+                        {getStatusInfo(task.status).text}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
     </Box>
   );
 };

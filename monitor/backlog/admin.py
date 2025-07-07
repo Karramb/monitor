@@ -34,14 +34,17 @@ class BacklogAdmin(admin.ModelAdmin):
         'theme',
         'author',
         'groups',
+        'created_at',
     )
     search_fields = (
         'theme',
         'author',
+        'created_at',
     )
     list_filter = (
         'theme',
         'author',
+        'created_at',
     )
 
 @admin.register(Comment)
