@@ -34,12 +34,13 @@ class Group(models.Model):
 
 class Backlog(models.Model):
     theme = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=16, choices=CHOICES_STATUS)
     text = models.TextField()
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='backlog',
+        related_name='tasks',
         verbose_name='Автор'
     )
     groups = models.ForeignKey(
@@ -50,9 +51,10 @@ class Backlog(models.Model):
     tags = models.ManyToManyField(
         Tag, verbose_name='Тег'
     )
+    attachment = models.FileField(upload_to='backlog_attachments/', blank=True, null=True)
 
     class Meta:
-        ordering = ('theme',)
+        ordering = ('id',)
         verbose_name = 'бэклог'
         verbose_name_plural = 'Бэклог'
 
@@ -64,7 +66,7 @@ class Comment(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='backlog', # Придумать название
+        related_name='comments',
         verbose_name='Автор'
     )
     text = models.TextField()
@@ -72,8 +74,10 @@ class Comment(models.Model):
     backlog = models.ForeignKey(
         Backlog,
         on_delete=models.CASCADE,
+        related_name='comments',
         verbose_name='Задача'
     )
+    attachment = models.FileField(upload_to='comment_attachments/', blank=True, null=True)
 
     class Meta:
         ordering = ['-created_at']

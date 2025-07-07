@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import HostListPage from './pages/HostListPage';
 import BacklogPage from './pages/BacklogPage';
 import BacklogItemPage from './pages/BacklogItemPage';
+import BacklogCreatePage from './pages/BacklogCreatePage';
 import Layout from './components/Layout';
 
 const theme = createTheme();
@@ -22,6 +23,7 @@ function App() {
             <Route index element={<HostListPage />} />
             <Route path="backlog" element={<BacklogPage />} />
             <Route path="backlog/:id" element={<BacklogItemPage />} />
+            <Route path="/backlog/new" element={<BacklogCreatePage />} />
           </Route>
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,0 +1,20 @@
+docker-compose -f docker-compose.test+prod_mongo.yml down
+docker-compose -f docker-compose.test+prod_mongo.yml up -d
+
+sudo docker-compose -f docker-compose.test.yml up -d
+sudo docker-compose -f docker-compose.test.yml down
+
+
+docker exec -it gitlab editor /etc/gitlab/gitlab.rb
+gitlab_rails['gitlab_issue_id_use_iid'] = true
+gitlab-ctl reconfigure
+gitlab-ctl restart
+
+http://172.20.0.111:8088/reverse?lat=55.7558&lon=37.6173&format=json
+
+clickhouse-client --host 172.20.0.111 --port 9008 --user root --password root
+
+/srv/nominatim
+
+
+http://172.20.0.101/AnnaN/common.git

@@ -20,19 +20,33 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'color']
 
 
-class BacklogSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(slug_field='username', queryset=User.objects.all())
-    groups = GroupSerializer()
-    tags = TagSerializer(many=True)
-
-    class Meta:
-        model = Backlog
-        fields = ['id', 'author', 'groups', 'tags', 'theme', 'text', 'status']
-
-
 class CommentSerializer(serializers.ModelSerializer):
-    author = UserSerializer()
+    author = UserSerializer(read_only=True)
     
     class Meta:
         model = Comment
-        fields = ['id', 'text', 'author', 'created_at']
+        fields = ['id', 'text', 'author', 'created_at', 'attachment']
+        read_only_fields = ['author', 'created_at']
+    
+    def validate(self, data):
+        if not data.get('text'):
+            raise serializers.ValidationError("Текст обязателен")
+        return data
+
+
+class BacklogSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True
+    )
+    groups = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all())
+    tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all())
+    comments = CommentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Backlog
+        fields = ['id', 'author', 'groups', 'tags', 'theme', 'text', 'status', 'attachment', 'comments', 'created_at']
+    
+    def get_comments(self, obj):
+        comments = obj.comments.all().order_by('-created_at')
+        return CommentSerializer(comments, many=True).data
