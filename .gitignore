@@ -149,6 +149,7 @@ dmypy.json
 media/
 sent_emails/
 monitor/staticfiles/
+monitor/comment_attachments/
 
 # Others
 node_modules
