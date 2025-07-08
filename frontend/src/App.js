@@ -4,6 +4,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import HostListPage from './pages/HostListPage';
 import BacklogPage from './pages/BacklogPage';
 import BacklogItemPage from './pages/BacklogItemPage';
@@ -26,6 +27,7 @@ function App() {
             <Route path="/backlog/new" element={<BacklogCreatePage />} />
           </Route>
           <Route path="/auth/login" element={<LoginPage />} />
+          <Route path="/auth/registration" element={<RegisterPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
