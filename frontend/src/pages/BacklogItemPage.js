@@ -1,31 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  Paper,
-  Chip,
-  TextField,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Avatar,
-  MenuItem,
-  Skeleton,
-  IconButton,
-  Autocomplete
+  Box, Typography, Paper, Chip, TextField, Button,
+  List, ListItem, ListItemText, Divider, Avatar, MenuItem,
+  Skeleton, Autocomplete
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import axios from 'axios';
 
 const getAccessToken = () => localStorage.getItem('token');
-
 const getAuthHeaders = () => ({
   'Authorization': `Bearer ${getAccessToken()}`,
-  'Content-Type': 'application/json'
 });
 
 const isImage = (filename) => /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);
@@ -37,18 +23,18 @@ const BacklogItemPage = () => {
   const [task, setTask] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [commentFile, setCommentFile] = useState(null);
+  const [commentFiles, setCommentFiles] = useState([]);
   const [groupsMap, setGroupsMap] = useState({});
   const [tagsMap, setTagsMap] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedTheme, setEditedTheme] = useState('');
   const [editedText, setEditedText] = useState('');
   const [editedStatus, setEditedStatus] = useState('');
-  const [editedAttachment, setEditedAttachment] = useState(null);
   const [editedTags, setEditedTags] = useState([]);
+  const [editedAttachments, setEditedAttachments] = useState([]);
 
   const statusLabels = {
     Create: 'Создана',
@@ -65,7 +51,7 @@ const BacklogItemPage = () => {
           axios.get(`/api/backlog/${id}/comments/`, { headers: getAuthHeaders() }),
           axios.get('/api/groups/', { headers: getAuthHeaders() }),
           axios.get('/api/tags/', { headers: getAuthHeaders() }),
-          axios.get('/api/users/me/', { headers: getAuthHeaders() })
+          axios.get('/api/users/me/', { headers: getAuthHeaders() }),
         ]);
 
         setTask(taskRes.data);
@@ -76,14 +62,8 @@ const BacklogItemPage = () => {
         setComments(commentsRes.data);
         setCurrentUser(userRes.data);
 
-        const groups = groupsRes.data.reduce((acc, group) => {
-          acc[group.id] = group;
-          return acc;
-        }, {});
-        const tags = tagsRes.data.reduce((acc, tag) => {
-          acc[tag.id] = tag;
-          return acc;
-        }, {});
+        const groups = Object.fromEntries(groupsRes.data.map(group => [group.id, group]));
+        const tags = Object.fromEntries(tagsRes.data.map(tag => [tag.id, tag]));
 
         setGroupsMap(groups);
         setTagsMap(tags);
@@ -98,6 +78,8 @@ const BacklogItemPage = () => {
     fetchData();
   }, [id, navigate]);
 
+  const isAuthor = currentUser && task?.author === currentUser.username;
+
   const handleSaveTask = async () => {
     try {
       const formData = new FormData();
@@ -105,16 +87,15 @@ const BacklogItemPage = () => {
       formData.append('text', editedText);
       formData.append('status', editedStatus);
       editedTags.forEach(tagId => formData.append('tags', tagId));
-      if (editedAttachment) {
-        formData.append('attachment', editedAttachment);
-      }
+      editedAttachments.forEach(file => formData.append('attachments', file));
 
       const response = await axios.patch(`/api/backlog/${id}/`, formData, {
-        headers: { Authorization: `Bearer ${getAccessToken()}` }
+        headers: getAuthHeaders(),
       });
 
       setTask(response.data);
       setIsEditing(false);
+      setEditedAttachments([]);
     } catch (error) {
       console.error('Ошибка сохранения задачи:', error);
     }
@@ -125,12 +106,22 @@ const BacklogItemPage = () => {
     setEditedText(task.text);
     setEditedStatus(task.status);
     setEditedTags(task.tags || []);
-    setEditedAttachment(null);
+    setEditedAttachments([]);
     setIsEditing(false);
   };
 
+  // Важное исправление: добавляем новые файлы к уже выбранным, не заменяя полностью
   const handleCommentFileChange = (e) => {
-    setCommentFile(e.target.files[0]);
+    const files = Array.from(e.target.files);
+    setCommentFiles(prev => [...prev, ...files]);
+    // Очищаем input, чтобы можно было выбрать те же файлы повторно, если нужно
+    e.target.value = null;
+  };
+
+  const handleEditedAttachmentsChange = (e) => {
+    const files = Array.from(e.target.files);
+    setEditedAttachments(prev => [...prev, ...files]);
+    e.target.value = null;
   };
 
   const handleAddComment = async () => {
@@ -138,20 +129,18 @@ const BacklogItemPage = () => {
 
     const formData = new FormData();
     formData.append('text', newComment);
-    if (commentFile) {
-      formData.append('attachment', commentFile);
-    }
+    commentFiles.forEach(file => formData.append('attachments', file));
 
     try {
       const response = await axios.post(`/api/backlog/${id}/comments/`, formData, {
-        headers: { Authorization: `Bearer ${getAccessToken()}` }
+        headers: getAuthHeaders(),
       });
 
       setComments([response.data, ...comments]);
       setNewComment('');
-      setCommentFile(null);
+      setCommentFiles([]);
     } catch (error) {
-      console.error('Ошибка при отправке комментария:', error.response?.data);
+      console.error('Ошибка при отправке комментария:', error);
     }
   };
 
@@ -160,14 +149,11 @@ const BacklogItemPage = () => {
       <Box sx={{ p: 3 }}>
         <Skeleton variant="rectangular" width="100%" height={56} sx={{ mb: 3 }} />
         <Skeleton variant="rectangular" width="100%" height={200} sx={{ mb: 3 }} />
-        <Skeleton variant="rectangular" width="100%" height={200} sx={{ mb: 3 }} />
       </Box>
     );
   }
 
   if (!task) return <Typography>Задача не найдена</Typography>;
-
-  const isAuthor = currentUser && task.author === currentUser.username;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -181,16 +167,14 @@ const BacklogItemPage = () => {
               size="small"
               sx={{ flex: 1, mr: 2 }}
             />
-            <Button variant="contained" size="small" onClick={handleSaveTask}>Сохранить</Button>
-            <Button size="small" onClick={handleCancelEdit}>Отмена</Button>
+            <Button variant="contained" onClick={handleSaveTask}>Сохранить</Button>
+            <Button onClick={handleCancelEdit}>Отмена</Button>
           </>
         ) : (
           <>
-            <Typography variant="h5" sx={{ fontWeight: 500 }}>
-              {task.theme}
-            </Typography>
+            <Typography variant="h5">{task.theme}</Typography>
             {isAuthor && (
-              <Button size="small" onClick={() => setIsEditing(true)}>Редактировать</Button>
+              <Button onClick={() => setIsEditing(true)}>Редактировать</Button>
             )}
           </>
         )}
@@ -207,50 +191,48 @@ const BacklogItemPage = () => {
             onChange={(e) => setEditedText(e.target.value)}
           />
         ) : (
-          <Typography paragraph sx={{ whiteSpace: 'pre-line' }}>{task.text}</Typography>
+          <Typography sx={{ whiteSpace: 'pre-line' }}>{task.text}</Typography>
         )}
 
-        <Box sx={{ mt: 3, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           <Box>
-            <Typography variant="subtitle1" gutterBottom>Группа:</Typography>
-            <Chip label={groupsMap[task.groups]?.name || '—'} size="small" />
+            <Typography>Группа:</Typography>
+            <Chip label={groupsMap[task.groups]?.name || '—'} />
           </Box>
 
           <Box>
-            <Typography variant="subtitle1" gutterBottom>Теги:</Typography>
+            <Typography>Теги:</Typography>
             {isEditing ? (
               <Autocomplete
                 multiple
                 options={Object.values(tagsMap)}
                 getOptionLabel={(option) => option.name}
                 value={Object.values(tagsMap).filter(tag => editedTags.includes(tag.id))}
-                onChange={(e, newValue) => setEditedTags(newValue.map(tag => tag.id))}
+                onChange={(e, value) => setEditedTags(value.map(tag => tag.id))}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip
                       key={option.id}
                       label={option.name}
-                      sx={{ backgroundColor: option.color, color: '#000' }}
                       {...getTagProps({ index })}
+                      sx={{ backgroundColor: option.color, color: '#000' }}
                     />
                   ))
                 }
-                renderInput={(params) => (
-                  <TextField {...params} variant="outlined" size="small" placeholder="Теги" />
-                )}
+                renderInput={(params) => <TextField {...params} size="small" />}
                 size="small"
                 sx={{ minWidth: 200 }}
               />
             ) : (
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {task.tags?.map(tagId => {
                   const tag = tagsMap[tagId];
                   return tag ? (
                     <Chip
                       key={tag.id}
                       label={tag.name}
+                      sx={{ backgroundColor: tag.color, color: '#000' }}
                       size="small"
-                      sx={{ backgroundColor: tag.color, color: '#000', fontSize: '0.7rem' }}
                     />
                   ) : null;
                 })}
@@ -259,7 +241,7 @@ const BacklogItemPage = () => {
           </Box>
 
           <Box>
-            <Typography variant="subtitle1" gutterBottom>Статус:</Typography>
+            <Typography>Статус:</Typography>
             {isEditing ? (
               <TextField
                 select
@@ -267,116 +249,183 @@ const BacklogItemPage = () => {
                 value={editedStatus}
                 onChange={(e) => setEditedStatus(e.target.value)}
               >
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <MenuItem key={value} value={value}>{label}</MenuItem>
+                {Object.entries(statusLabels).map(([val, label]) => (
+                  <MenuItem key={val} value={val}>{label}</MenuItem>
                 ))}
               </TextField>
             ) : (
-              <Typography>{statusLabels[task.status] || task.status}</Typography>
+              <Typography>{statusLabels[task.status]}</Typography>
             )}
           </Box>
 
           <Box>
-            <Typography variant="subtitle1" gutterBottom>Файл:</Typography>
+            <Typography>Файлы:</Typography>
             {isEditing ? (
               <>
-                {task.attachment && !editedAttachment && (
-                  <Button size="small" onClick={() => window.open(task.attachment)}>Текущий файл</Button>
-                )}
                 <input
                   type="file"
-                  onChange={(e) => setEditedAttachment(e.target.files[0])}
+                  multiple
+                  onChange={handleEditedAttachmentsChange}
                   style={{ display: 'none' }}
-                  id="edit-attachment"
+                  id="edit-files"
                 />
-                <label htmlFor="edit-attachment">
-                  <Button component="span" size="small" startIcon={<AttachFileIcon />}>
-                    {editedAttachment ? 'Заменить файл' : 'Прикрепить файл'}
-                  </Button>
+                <label htmlFor="edit-files">
+                  <Button component="span" startIcon={<AttachFileIcon />}>Прикрепить</Button>
                 </label>
-                {editedAttachment && <Typography variant="body2">{editedAttachment.name}</Typography>}
+                <Box sx={{ mt: 1 }}>
+                  {editedAttachments.map((file, i) => (
+                    <Typography key={i} variant="body2">{file.name}</Typography>
+                  ))}
+                </Box>
               </>
             ) : (
-              task.attachment ? (
-                <Button size="small" onClick={() => window.open(task.attachment)}>Скачать</Button>
-              ) : (
-                <Typography variant="body2" color="text.secondary">Нет файла</Typography>
-              )
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {task.attachments?.map((att) => (
+                  <Box key={att.id} sx={{ maxWidth: 100, mb: 1 }}>
+                    {isImage(att.file) ? (
+                      <>
+                        <img
+                          src={att.file}
+                          alt="comment attachment"
+                          style={{
+                            maxWidth: '100px',
+                            maxHeight: '100px',
+                            objectFit: 'contain',
+                            cursor: 'pointer',
+                            display: 'block', // важно, чтобы заняло отдельную строку
+                            marginBottom: '4px', // отступ снизу от картинки
+                          }}
+                          onClick={() => window.open(att.file, '_blank')}
+                        />
+                        <Typography
+                          variant="body2"
+                          noWrap
+                          sx={{ maxWidth: '100px', wordBreak: 'break-word' }}
+                          title={decodeURIComponent(att.file.split('/').pop())} // всплывающая подсказка с полным именем
+                        >
+                          {decodeURIComponent(att.file.split('/').pop())}
+                        </Typography>
+                      </>
+                    ) : (
+                      <a href={att.file} target="_blank" rel="noreferrer">
+                        {decodeURIComponent(att.file.split('/').pop())}
+                      </a>
+                    )}
+                  </Box>
+                ))}
+              </Box>
             )}
           </Box>
         </Box>
       </Paper>
 
-      <Paper sx={{ p: 3 }}>
+      <Box>
         <Typography variant="h6" gutterBottom>Комментарии</Typography>
 
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: 2 }}>
           <TextField
-            fullWidth
+            label="Новый комментарий"
             multiline
-            minRows={3}
-            maxRows={6}
-            variant="outlined"
-            placeholder="Добавить комментарий..."
+            minRows={2}
+            fullWidth
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
           />
-          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <input
-              type="file"
-              onChange={handleCommentFileChange}
-              style={{ display: 'none' }}
-              id="comment-file-upload"
-            />
-            <label htmlFor="comment-file-upload">
-              <IconButton component="span" size="small" title="Прикрепить файл">
-                <AttachFileIcon />
-              </IconButton>
-            </label>
-
-            {commentFile && <Typography variant="body2">{commentFile.name}</Typography>}
-
-            <Button
-              variant="contained"
-              endIcon={<SendIcon />}
-              onClick={handleAddComment}
-              disabled={!newComment.trim()}
-              sx={{ ml: 'auto' }}
-            >
-              Отправить
+          <input
+            type="file"
+            multiple
+            onChange={handleCommentFileChange}
+            style={{ display: 'none' }}
+            id="comment-files"
+          />
+          <label htmlFor="comment-files">
+            <Button startIcon={<AttachFileIcon />} component="span" sx={{ mt: 1 }}>
+              Прикрепить файлы
             </Button>
+          </label>
+          <Box sx={{ mt: 1 }}>
+            {commentFiles.map((file, i) => (
+              <Typography key={i} variant="body2">{file.name}</Typography>
+            ))}
           </Box>
+          <Button
+            variant="contained"
+            endIcon={<SendIcon />}
+            onClick={handleAddComment}
+            sx={{ mt: 1 }}
+            disabled={!newComment.trim()}
+          >
+            Отправить
+          </Button>
         </Box>
 
         <List>
-          {comments.length === 0 && (
-            <Typography variant="body2" color="text.secondary">Комментариев нет</Typography>
-          )}
-          {comments.map((comment) => (
+          {comments.map(comment => (
             <React.Fragment key={comment.id}>
               <ListItem alignItems="flex-start">
-                <Avatar sx={{ mr: 2 }}>
-                  {comment.author?.username ? comment.author.username.charAt(0).toUpperCase() : '?'}
-                </Avatar>
+                <Avatar sx={{ mr: 2 }}>{comment.author?.username[0].toUpperCase()}</Avatar>
                 <ListItemText
-                  primary={`${comment.author?.username || 'Неизвестный'} — ${new Date(comment.created_at).toLocaleString()}`}
+                  primary={`${comment.author?.username} (${comment.created_at})`}
                   secondary={
                     <>
-                      <Typography sx={{ whiteSpace: 'pre-line' }}>{comment.text}</Typography>
-                      {comment.attachment && (
-                        isImage(comment.attachment) ? (
+                      <Typography
+                        sx={{ whiteSpace: 'pre-line' }}
+                        component="span"
+                        variant="body2"
+                        color="text.primary"
+                      >
+                        {comment.text}
+                      </Typography>
+                      <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {(comment.attachments || []).map(att => (
                           <Box
-                            component="img"
-                            src={comment.attachment}
-                            alt="attachment"
-                            sx={{ maxWidth: 300, mt: 1, borderRadius: 1 }}
-                          />
-                        ) : (
-                          <Button size="small" onClick={() => window.open(comment.attachment)} sx={{ mt: 1 }}>
-                            Скачать вложение
-                          </Button>
-                        )
-                      )}
+                            key={att.id}
+                            sx={{
+                              maxWidth: 100,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              mb: 1,
+                              wordBreak: 'break-word', // перенос длинных имен
+                            }}
+                          >
+                            {isImage(att.file) ? (
+                              <>
+                                <img
+                                  src={att.file}
+                                  alt="comment attachment"
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '100px',
+                                    objectFit: 'contain',
+                                    cursor: 'pointer',
+                                    display: 'block',
+                                  }}
+                                  onClick={() => window.open(att.file, '_blank')}
+                                />
+                                <Typography
+                                  variant="body2"
+                                  sx={{ mt: 0.5, textAlign: 'center' }}
+                                  title={decodeURIComponent(att.file.split('/').pop())}
+                                >
+                                  {decodeURIComponent(att.file.split('/').pop())}
+                                </Typography>
+                              </>
+                            ) : (
+                              <a
+                                href={att.file}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ wordBreak: 'break-word', textAlign: 'center', display: 'block' }}
+                                title={decodeURIComponent(att.file.split('/').pop())}
+                              >
+                                {decodeURIComponent(att.file.split('/').pop())}
+                              </a>
+                            )}
+                          </Box>
+                        ))}
+
+                      </Box>
                     </>
                   }
                 />
@@ -385,7 +434,7 @@ const BacklogItemPage = () => {
             </React.Fragment>
           ))}
         </List>
-      </Paper>
+      </Box>
     </Box>
   );
 };

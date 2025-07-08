@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from backlog.models import Backlog, Comment, Group, Tag
+from backlog.models import Backlog, BacklogAttachment, Comment, CommentAttachment, Group, Tag
 from users.serializers import UserSerializer
 
 
@@ -20,18 +20,31 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'color']
 
 
+class CommentAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentAttachment
+        fields = ['id', 'file']
+
+
 class CommentSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
+    attachments = CommentAttachmentSerializer(many=True, read_only=True)
     
     class Meta:
         model = Comment
-        fields = ['id', 'text', 'author', 'created_at', 'attachment']
+        fields = ['id', 'text', 'author', 'created_at', 'attachments']
         read_only_fields = ['author', 'created_at']
     
     def validate(self, data):
         if not data.get('text'):
             raise serializers.ValidationError("Текст обязателен")
         return data
+
+
+class BacklogAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BacklogAttachment
+        fields = ['id', 'file']
 
 
 class BacklogSerializer(serializers.ModelSerializer):
@@ -42,10 +55,12 @@ class BacklogSerializer(serializers.ModelSerializer):
     groups = serializers.PrimaryKeyRelatedField(queryset=Group.objects.all())
     tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all())
     comments = CommentSerializer(many=True, read_only=True)
+    attachments = BacklogAttachmentSerializer(many=True, read_only=True)
+
 
     class Meta:
         model = Backlog
-        fields = ['id', 'author', 'groups', 'tags', 'theme', 'text', 'status', 'attachment', 'comments', 'created_at']
+        fields = ['id', 'author', 'groups', 'tags', 'theme', 'text', 'status', 'attachments', 'comments', 'created_at']
     
     def get_comments(self, obj):
         comments = obj.comments.all().order_by('-created_at')

@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework import generics, mixins, serializers, status, viewsets
@@ -8,7 +9,7 @@ from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from backlog.models import Backlog, Comment, Group, Tag
+from backlog.models import Backlog, BacklogAttachment, Comment, CommentAttachment, Group, Tag
 from backlog.serializers import BacklogSerializer, CommentSerializer, GroupSerializer, TagSerializer
 from core.models import SSHHost
 from core.serializers import SSHHostSerializer
@@ -31,17 +32,19 @@ class BacklogViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def create(self, request, *args, **kwargs):
-        print("User in create:", request.user)
-        print("Is authenticated:", request.user.is_authenticated)
-        print("Auth:", request.auth)
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             print("Validation errors:", serializer.errors)
             return Response(serializer.errors, status=400)
-        
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=201, headers=headers)
+
+        backlog = serializer.save(author=request.user)  # <-- сохрани результат
+
+        for file in request.FILES.getlist('attachments'):
+            BacklogAttachment.objects.create(backlog=backlog, file=file)
+
+        full_serializer = self.get_serializer(backlog)
+        headers = self.get_success_headers(full_serializer.data)
+        return Response(full_serializer.data, status=201, headers=headers)
 
 
 class CommentViewSet(mixins.CreateModelMixin,
@@ -55,8 +58,24 @@ class CommentViewSet(mixins.CreateModelMixin,
         return Comment.objects.filter(backlog_id=self.kwargs['backlog_id'])
 
     def perform_create(self, serializer):
-        print("Полученные данные:", serializer.validated_data)
-        serializer.save(author=self.request.user, backlog_id=self.kwargs['backlog_id'])
+        backlog_id = self.kwargs.get('backlog_id')
+        backlog = get_object_or_404(Backlog, id=backlog_id)
+        serializer.save(author=self.request.user, backlog=backlog)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)  # вызывает serializer.save с author и backlog
+
+        comment = serializer.instance  # объект созданного комментария
+
+        # Сохраняем вложения
+        for file in request.FILES.getlist('attachments'):
+            CommentAttachment.objects.create(comment=comment, file=file)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=201, headers=headers)
 
 
 class GroupViewSet(viewsets.ModelViewSet):
@@ -84,10 +103,14 @@ class SSHHostDetailAPIView(generics.RetrieveAPIView):
 
 class GitlabWebhookView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        print(request.data)
+        object_attributes = request.data.get('object_attributes', {})
+        commit_sha = object_attributes.get('sha', '')[:8]
+        commit_time = object_attributes.get('finished_at', '')
+
+        print(f"Commit: {commit_sha}, Finished at: {commit_time}")
         return Response({'status': 'received'})
 
 
