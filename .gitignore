@@ -150,6 +150,7 @@ media/
 sent_emails/
 monitor/staticfiles/
 monitor/comment_attachments/
+monitor/backlog_attachments/
 
 # Others
 node_modules

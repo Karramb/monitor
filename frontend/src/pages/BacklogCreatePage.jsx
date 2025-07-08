@@ -11,9 +11,11 @@ import {
   OutlinedInput,
   Checkbox,
   ListItemText,
+  IconButton,
 } from '@mui/material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const STATUS_OPTIONS = [
   { value: 'Create', label: 'Создана' },
@@ -30,7 +32,7 @@ const BacklogCreatePage = () => {
   const [groupId, setGroupId] = useState('');
   const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
-  const [attachment, setAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -88,8 +90,15 @@ const BacklogCreatePage = () => {
     fetchData();
   }, [navigate]);
 
+  // Добавляем файлы, не заменяя существующие
   const handleFileChange = (e) => {
-    setAttachment(e.target.files[0]);
+    const files = Array.from(e.target.files);
+    setAttachments(prev => [...prev, ...files]);
+  };
+
+  // Удаление отдельного файла из списка
+  const handleRemoveAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -113,9 +122,7 @@ const BacklogCreatePage = () => {
     formData.append('text', text);
     formData.append('groups', groupId);
     selectedTags.forEach(tagId => formData.append('tags', tagId));
-    if (attachment) {
-      formData.append('attachment', attachment);
-    }
+    attachments.forEach(file => formData.append('attachments', file)); // Обрати внимание на 'attachments' (множественное)
 
     try {
       const csrfToken = getCsrfToken();
@@ -242,13 +249,29 @@ const BacklogCreatePage = () => {
         </FormControl>
 
         <Button variant="contained" component="label" sx={{ mt: 2 }}>
-          Загрузить файл
-          <input type="file" hidden onChange={handleFileChange} />
+          Загрузить файлы
+          <input type="file" hidden multiple onChange={handleFileChange} />
         </Button>
-        {attachment && (
-          <Typography variant="body2" mt={1}>
-            {attachment.name}
-          </Typography>
+
+        {attachments.length > 0 && (
+          <Box mt={1}>
+            <Typography variant="body2">Выбранные файлы:</Typography>
+            {attachments.map((file, index) => (
+              <Box key={index} display="flex" alignItems="center" mt={0.5}>
+                <Typography variant="body2" noWrap sx={{ maxWidth: '80%' }}>
+                  {file.name}
+                </Typography>
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleRemoveAttachment(index)}
+                  aria-label="Удалить файл"
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
         )}
 
         <Box mt={3}>

@@ -51,7 +51,6 @@ class Backlog(models.Model):
     tags = models.ManyToManyField(
         Tag, verbose_name='Тег'
     )
-    attachment = models.FileField(upload_to='backlog_attachments/', blank=True, null=True)
 
     class Meta:
         ordering = ('id',)
@@ -60,6 +59,24 @@ class Backlog(models.Model):
 
     def __str__(self):
         return self.theme[:MAX_LEN_STR_DEF]
+
+
+class BacklogAttachment(models.Model):
+    backlog = models.ForeignKey(
+        Backlog, related_name='attachments', on_delete=models.CASCADE
+    )
+    file = models.FileField(upload_to='backlog_attachments/')
+
+    class Meta:
+        ordering = ('id',)
+        verbose_name = 'вложения к задачам'
+        verbose_name_plural = 'Вложения к задачам'
+
+    def __str__(self):
+        return self.file.name.split('/')[-1]  # Показываем только имя файла
+
+    def filename(self):
+        return self.file.name.split('/')[-1]
 
 
 class Comment(models.Model):
@@ -77,7 +94,6 @@ class Comment(models.Model):
         related_name='comments',
         verbose_name='Задача'
     )
-    attachment = models.FileField(upload_to='comment_attachments/', blank=True, null=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -86,3 +102,21 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.text[:MAX_LEN_STR_DEF]
+
+
+class CommentAttachment(models.Model):
+    comment = models.ForeignKey(
+        Comment, related_name='attachments', on_delete=models.CASCADE
+    )
+    file = models.FileField(upload_to='comment_attachments/')
+
+    class Meta:
+        ordering = ('id',)
+        verbose_name = 'вложения к комментариям'
+        verbose_name_plural = 'Вложения к комментариям'
+
+    def __str__(self):
+        return self.file.name.split('/')[-1]  # Показываем только имя файла
+
+    def filename(self):
+        return self.file.name.split('/')[-1]
