@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Chip, Table, TableBody, TableCell, TableContainer,
+  Box, Button, Chip, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 function BacklogPage() {
+  const navigate = useNavigate();
+
   const [tasks, setTasks] = useState([]);
   const [groups, setGroups] = useState([]);
   const [tags, setTags] = useState([]);
@@ -59,9 +61,19 @@ function BacklogPage() {
     );
   });
 
+  // Функция для перехода на страницу создания задачи
+  const handleCreateClick = () => {
+    navigate('/backlog/new');
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
-      <h2>Backlog</h2>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <h2>Backlog</h2>
+        <Button variant="contained" color="primary" onClick={handleCreateClick}>
+          Создать задачу
+        </Button>
+      </Box>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -136,7 +148,6 @@ function BacklogPage() {
                             size="small"
                             sx={{
                               backgroundColor: tag.color,
-                              color: '#fff',
                               fontSize: '0.7rem',
                               height: 22,
                               borderRadius: '3px'
