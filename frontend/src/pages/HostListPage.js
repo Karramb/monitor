@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { getHosts, getCsrfToken } from '../api';
 import HostCard from '../components/HostCard';
-import { Typography } from '@mui/material';
+import { Typography, Box } from '@mui/material'; // Добавляем Box
 
 const HostListPage = () => {
   console.log('🏁 HostListPage отрендерен');
-  const [hosts, setHosts] = useState(null); // Изначально null вместо []
+  const [hosts, setHosts] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -15,7 +15,7 @@ const HostListPage = () => {
       try {
         await getCsrfToken();
         const data = await getHosts();
-        setHosts(data); // Данные точно придут, т.к. API возвращает массив
+        setHosts(data);
       } catch (err) {
         console.error('Error fetching hosts:', err);
         setError('Ошибка загрузки серверов');
@@ -35,24 +35,30 @@ const HostListPage = () => {
     return <div>{error}</div>;
   }
 
-  // Добавляем проверку на null/undefined
   if (!hosts) {
     return <div>Данные не загружены</div>;
   }
 
   return (
-    <>
+    <Box sx={{ p: 3 }}> {/* Добавляем отступы */}
       <Typography variant="h4" gutterBottom>
         Серверы
       </Typography>
-      {hosts.length > 0 ? (
-        hosts.map((host) => (
-          <HostCard key={host.id} host={host} />
-        ))
-      ) : (
-        <div>Нет доступных серверов</div>
-      )}
-    </>
+      <Box sx={{ 
+        display: 'flex',
+        flexWrap: 'wrap', // Перенос на новую строку при нехватке места
+        gap: 2, // Отступ между карточками
+        justifyContent: 'flex-start' // Выравнивание по левому краю
+      }}>
+        {hosts.length > 0 ? (
+          hosts.map((host) => (
+            <HostCard key={host.id} host={host} />
+          ))
+        ) : (
+          <Typography>Нет доступных серверов</Typography>
+        )}
+      </Box>
+    </Box>
   );
 };
 
