@@ -14,7 +14,8 @@ import {
   Avatar,
   MenuItem,
   Skeleton,
-  IconButton
+  IconButton,
+  Autocomplete
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
@@ -22,17 +23,12 @@ import axios from 'axios';
 
 const getAccessToken = () => localStorage.getItem('token');
 
-const getAuthHeaders = () => {
-  const token = getAccessToken();
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  };
-};
+const getAuthHeaders = () => ({
+  'Authorization': `Bearer ${getAccessToken()}`,
+  'Content-Type': 'application/json'
+});
 
-const isImage = (filename) => {
-  return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);
-};
+const isImage = (filename) => /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);
 
 const BacklogItemPage = () => {
   const { id } = useParams();
@@ -49,15 +45,17 @@ const BacklogItemPage = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedTheme, setEditedTheme] = useState('');
+  const [editedText, setEditedText] = useState('');
+  const [editedStatus, setEditedStatus] = useState('');
+  const [editedAttachment, setEditedAttachment] = useState(null);
+  const [editedTags, setEditedTags] = useState([]);
+
   const statusLabels = {
     Create: 'Создана',
     Accepted: 'Принята',
     In_test: 'В тесте',
     Done: 'Выполнена',
   };
-  const [editedText, setEditedText] = useState('');
-  const [editedStatus, setEditedStatus] = useState('');
-  const [editedAttachment, setEditedAttachment] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,6 +72,7 @@ const BacklogItemPage = () => {
         setEditedTheme(taskRes.data.theme);
         setEditedText(taskRes.data.text);
         setEditedStatus(taskRes.data.status);
+        setEditedTags(taskRes.data.tags || []);
         setComments(commentsRes.data);
         setCurrentUser(userRes.data);
 
@@ -105,19 +104,14 @@ const BacklogItemPage = () => {
       formData.append('theme', editedTheme);
       formData.append('text', editedText);
       formData.append('status', editedStatus);
+      editedTags.forEach(tagId => formData.append('tags', tagId));
       if (editedAttachment) {
         formData.append('attachment', editedAttachment);
       }
 
-      const response = await axios.patch(
-        `/api/backlog/${id}/`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${getAccessToken()}`
-          }
-        }
-      );
+      const response = await axios.patch(`/api/backlog/${id}/`, formData, {
+        headers: { Authorization: `Bearer ${getAccessToken()}` }
+      });
 
       setTask(response.data);
       setIsEditing(false);
@@ -130,6 +124,7 @@ const BacklogItemPage = () => {
     setEditedTheme(task.theme);
     setEditedText(task.text);
     setEditedStatus(task.status);
+    setEditedTags(task.tags || []);
     setEditedAttachment(null);
     setIsEditing(false);
   };
@@ -148,15 +143,9 @@ const BacklogItemPage = () => {
     }
 
     try {
-      const response = await axios.post(
-        `/api/backlog/${id}/comments/`,
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${getAccessToken()}`
-          }
-        }
-      );
+      const response = await axios.post(`/api/backlog/${id}/comments/`, formData, {
+        headers: { Authorization: `Bearer ${getAccessToken()}` }
+      });
 
       setComments([response.data, ...comments]);
       setNewComment('');
@@ -201,9 +190,7 @@ const BacklogItemPage = () => {
               {task.theme}
             </Typography>
             {isAuthor && (
-              <Button size="small" onClick={() => setIsEditing(true)}>
-                Редактировать
-              </Button>
+              <Button size="small" onClick={() => setIsEditing(true)}>Редактировать</Button>
             )}
           </>
         )}
@@ -231,19 +218,44 @@ const BacklogItemPage = () => {
 
           <Box>
             <Typography variant="subtitle1" gutterBottom>Теги:</Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {task.tags?.map(tagId => {
-                const tag = tagsMap[tagId];
-                return tag ? (
-                  <Chip
-                    key={tag.id}
-                    label={tag.name}
-                    size="small"
-                    sx={{ backgroundColor: tag.color, color: '#fff', fontSize: '0.7rem' }}
-                  />
-                ) : null;
-              })}
-            </Box>
+            {isEditing ? (
+              <Autocomplete
+                multiple
+                options={Object.values(tagsMap)}
+                getOptionLabel={(option) => option.name}
+                value={Object.values(tagsMap).filter(tag => editedTags.includes(tag.id))}
+                onChange={(e, newValue) => setEditedTags(newValue.map(tag => tag.id))}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      key={option.id}
+                      label={option.name}
+                      sx={{ backgroundColor: option.color, color: '#000' }}
+                      {...getTagProps({ index })}
+                    />
+                  ))
+                }
+                renderInput={(params) => (
+                  <TextField {...params} variant="outlined" size="small" placeholder="Теги" />
+                )}
+                size="small"
+                sx={{ minWidth: 200 }}
+              />
+            ) : (
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {task.tags?.map(tagId => {
+                  const tag = tagsMap[tagId];
+                  return tag ? (
+                    <Chip
+                      key={tag.id}
+                      label={tag.name}
+                      size="small"
+                      sx={{ backgroundColor: tag.color, color: '#000', fontSize: '0.7rem' }}
+                    />
+                  ) : null;
+                })}
+              </Box>
+            )}
           </Box>
 
           <Box>
@@ -255,10 +267,9 @@ const BacklogItemPage = () => {
                 value={editedStatus}
                 onChange={(e) => setEditedStatus(e.target.value)}
               >
-                <MenuItem value="Create">Создана</MenuItem>
-                <MenuItem value="Accepted">Принята</MenuItem>
-                <MenuItem value="In_test">В тесте</MenuItem>
-                <MenuItem value="Done">Выполнена</MenuItem>
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <MenuItem key={value} value={value}>{label}</MenuItem>
+                ))}
               </TextField>
             ) : (
               <Typography>{statusLabels[task.status] || task.status}</Typography>
@@ -270,12 +281,7 @@ const BacklogItemPage = () => {
             {isEditing ? (
               <>
                 {task.attachment && !editedAttachment && (
-                  <Button
-                    size="small"
-                    onClick={() => window.open(task.attachment)}
-                  >
-                    Текущий файл
-                  </Button>
+                  <Button size="small" onClick={() => window.open(task.attachment)}>Текущий файл</Button>
                 )}
                 <input
                   type="file"
@@ -288,15 +294,11 @@ const BacklogItemPage = () => {
                     {editedAttachment ? 'Заменить файл' : 'Прикрепить файл'}
                   </Button>
                 </label>
-                {editedAttachment && (
-                  <Typography variant="body2">{editedAttachment.name}</Typography>
-                )}
+                {editedAttachment && <Typography variant="body2">{editedAttachment.name}</Typography>}
               </>
             ) : (
               task.attachment ? (
-                <Button size="small" onClick={() => window.open(task.attachment)}>
-                  Скачать
-                </Button>
+                <Button size="small" onClick={() => window.open(task.attachment)}>Скачать</Button>
               ) : (
                 <Typography variant="body2" color="text.secondary">Нет файла</Typography>
               )
@@ -332,9 +334,7 @@ const BacklogItemPage = () => {
               </IconButton>
             </label>
 
-            {commentFile && (
-              <Typography variant="body2">{commentFile.name}</Typography>
-            )}
+            {commentFile && <Typography variant="body2">{commentFile.name}</Typography>}
 
             <Button
               variant="contained"
@@ -362,9 +362,7 @@ const BacklogItemPage = () => {
                   primary={`${comment.author?.username || 'Неизвестный'} — ${new Date(comment.created_at).toLocaleString()}`}
                   secondary={
                     <>
-                      <Typography sx={{ whiteSpace: 'pre-line' }}>
-                        {comment.text}
-                      </Typography>
+                      <Typography sx={{ whiteSpace: 'pre-line' }}>{comment.text}</Typography>
                       {comment.attachment && (
                         isImage(comment.attachment) ? (
                           <Box
@@ -374,11 +372,7 @@ const BacklogItemPage = () => {
                             sx={{ maxWidth: 300, mt: 1, borderRadius: 1 }}
                           />
                         ) : (
-                          <Button
-                            size="small"
-                            onClick={() => window.open(comment.attachment)}
-                            sx={{ mt: 1 }}
-                          >
+                          <Button size="small" onClick={() => window.open(comment.attachment)} sx={{ mt: 1 }}>
                             Скачать вложение
                           </Button>
                         )
