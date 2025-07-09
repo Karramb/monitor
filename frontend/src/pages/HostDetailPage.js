@@ -70,5 +70,3 @@ const HostDetailPage = () => {
     </Layout>
   );
 };
-
-export default HostDetailPage;

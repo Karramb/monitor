@@ -7,6 +7,7 @@ class SSHHost(models.Model):
     name = models.CharField(max_length=100)
     host = models.CharField(max_length=100)
     port = models.IntegerField(default=22)
+    commit = models.CharField(max_length=100, null=True, blank=True)
     button_change_base = models.BooleanField(default=False)
     button_dump_pg = models.BooleanField(default=False)
     docker_base = models.CharField(max_length=100)

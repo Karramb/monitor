@@ -56,7 +56,8 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 await self.send(json.dumps({
                     'config_status': result['config_status'],
                     'last_update': ssh_host.last_update.isoformat() if ssh_host.last_update else None,
-                    'last_commit': ssh_host.last_commit.isoformat() if ssh_host.last_commit else None
+                    'last_commit': ssh_host.last_commit.isoformat() if ssh_host.last_commit else None,
+                    'commitHash': ssh_host.commit if ssh_host.commit else None
                 }))
             except asyncio.CancelledError:
                 break
