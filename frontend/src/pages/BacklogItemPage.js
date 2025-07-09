@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
 const getAccessToken = () => localStorage.getItem('token');
@@ -35,6 +36,7 @@ const BacklogItemPage = () => {
   const [editedStatus, setEditedStatus] = useState('');
   const [editedTags, setEditedTags] = useState([]);
   const [editedAttachments, setEditedAttachments] = useState([]);
+  const [filesToDelete, setFilesToDelete] = useState([]);
 
   const statusLabels = {
     Create: 'Создана',
@@ -80,6 +82,14 @@ const BacklogItemPage = () => {
 
   const isAuthor = currentUser && task?.author === currentUser.username;
 
+  const handleDeleteFile = (fileId) => {
+    setFilesToDelete(prev => [...prev, fileId]);
+  };
+
+  const handleCancelDeleteFile = (fileId) => {
+    setFilesToDelete(prev => prev.filter(id => id !== fileId));
+  };
+
   const handleSaveTask = async () => {
     try {
       const formData = new FormData();
@@ -93,9 +103,23 @@ const BacklogItemPage = () => {
         headers: getAuthHeaders(),
       });
 
-      setTask(response.data);
+      // Удаляем файлы, которые были помечены для удаления
+      for (const fileId of filesToDelete) {
+        try {
+          await axios.delete(`/api/backlog/${id}/attachments/${fileId}/`, {
+            headers: getAuthHeaders(),
+          });
+        } catch (error) {
+          console.error('Ошибка удаления файла:', error);
+        }
+      }
+
+      // Обновляем задачу после всех изменений
+      const updatedTaskRes = await axios.get(`/api/backlog/${id}/`, { headers: getAuthHeaders() });
+      setTask(updatedTaskRes.data);
       setIsEditing(false);
       setEditedAttachments([]);
+      setFilesToDelete([]);
     } catch (error) {
       console.error('Ошибка сохранения задачи:', error);
     }
@@ -107,14 +131,13 @@ const BacklogItemPage = () => {
     setEditedStatus(task.status);
     setEditedTags(task.tags || []);
     setEditedAttachments([]);
+    setFilesToDelete([]);
     setIsEditing(false);
   };
 
-  // Важное исправление: добавляем новые файлы к уже выбранным, не заменяя полностью
   const handleCommentFileChange = (e) => {
     const files = Array.from(e.target.files);
     setCommentFiles(prev => [...prev, ...files]);
-    // Очищаем input, чтобы можно было выбрать те же файлы повторно, если нужно
     e.target.value = null;
   };
 
@@ -262,6 +285,84 @@ const BacklogItemPage = () => {
             <Typography>Файлы:</Typography>
             {isEditing ? (
               <>
+                {/* Показываем существующие файлы */}
+                {task.attachments && task.attachments.length > 0 && (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                    {task.attachments.map((att) => (
+                      <Box 
+                        key={att.id} 
+                        sx={{ 
+                          maxWidth: 100, 
+                          mb: 1,
+                          opacity: filesToDelete.includes(att.id) ? 0.5 : 1,
+                          border: filesToDelete.includes(att.id) ? '1px dashed red' : 'none',
+                          borderRadius: 1,
+                          p: 1
+                        }}
+                      >
+                        {isImage(att.file) ? (
+                          <>
+                            <img
+                              src={att.file}
+                              alt="attachment"
+                              style={{
+                                maxWidth: '100px',
+                                maxHeight: '100px',
+                                objectFit: 'contain',
+                                cursor: 'pointer',
+                                display: 'block',
+                                marginBottom: '4px',
+                              }}
+                              onClick={() => window.open(att.file, '_blank')}
+                            />
+                            <Typography
+                              variant="body2"
+                              noWrap
+                              sx={{ maxWidth: '100px', wordBreak: 'break-word', fontSize: '10px' }}
+                              title={decodeURIComponent(att.file.split('/').pop())}
+                            >
+                              {decodeURIComponent(att.file.split('/').pop())}
+                            </Typography>
+                          </>
+                        ) : (
+                          <a 
+                            href={att.file} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{ fontSize: '10px' }}
+                          >
+                            {decodeURIComponent(att.file.split('/').pop())}
+                          </a>
+                        )}
+                        
+                        {/* Кнопки удаления/отмены */}
+                        <Box sx={{ mt: 1 }}>
+                          {filesToDelete.includes(att.id) ? (
+                            <Button 
+                              size="small" 
+                              onClick={() => handleCancelDeleteFile(att.id)}
+                              sx={{ fontSize: '10px', minWidth: 'auto', p: 0.5 }}
+                            >
+                              Отменить
+                            </Button>
+                          ) : (
+                            <Button 
+                              size="small" 
+                              color="error" 
+                              onClick={() => handleDeleteFile(att.id)}
+                              sx={{ fontSize: '10px', minWidth: 'auto', p: 0.5 }}
+                              startIcon={<DeleteIcon sx={{ fontSize: '12px' }} />}
+                            >
+                              Удалить
+                            </Button>
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                
+                {/* Поле для добавления новых файлов */}
                 <input
                   type="file"
                   multiple
@@ -270,13 +371,24 @@ const BacklogItemPage = () => {
                   id="edit-files"
                 />
                 <label htmlFor="edit-files">
-                  <Button component="span" startIcon={<AttachFileIcon />}>Прикрепить</Button>
+                  <Button component="span" startIcon={<AttachFileIcon />}>
+                    Прикрепить новые файлы
+                  </Button>
                 </label>
-                <Box sx={{ mt: 1 }}>
-                  {editedAttachments.map((file, i) => (
-                    <Typography key={i} variant="body2">{file.name}</Typography>
-                  ))}
-                </Box>
+                
+                {/* Показываем выбранные новые файлы */}
+                {editedAttachments.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                      Новые файлы:
+                    </Typography>
+                    {editedAttachments.map((file, i) => (
+                      <Typography key={i} variant="body2" sx={{ color: 'green' }}>
+                        {file.name}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
               </>
             ) : (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -286,14 +398,14 @@ const BacklogItemPage = () => {
                       <>
                         <img
                           src={att.file}
-                          alt="comment attachment"
+                          alt="attachment"
                           style={{
                             maxWidth: '100px',
                             maxHeight: '100px',
                             objectFit: 'contain',
                             cursor: 'pointer',
-                            display: 'block', // важно, чтобы заняло отдельную строку
-                            marginBottom: '4px', // отступ снизу от картинки
+                            display: 'block',
+                            marginBottom: '4px',
                           }}
                           onClick={() => window.open(att.file, '_blank')}
                         />
@@ -301,7 +413,7 @@ const BacklogItemPage = () => {
                           variant="body2"
                           noWrap
                           sx={{ maxWidth: '100px', wordBreak: 'break-word' }}
-                          title={decodeURIComponent(att.file.split('/').pop())} // всплывающая подсказка с полным именем
+                          title={decodeURIComponent(att.file.split('/').pop())}
                         >
                           {decodeURIComponent(att.file.split('/').pop())}
                         </Typography>
@@ -386,7 +498,7 @@ const BacklogItemPage = () => {
                               flexDirection: 'column',
                               alignItems: 'center',
                               mb: 1,
-                              wordBreak: 'break-word', // перенос длинных имен
+                              wordBreak: 'break-word',
                             }}
                           >
                             {isImage(att.file) ? (
@@ -424,7 +536,6 @@ const BacklogItemPage = () => {
                             )}
                           </Box>
                         ))}
-
                       </Box>
                     </>
                   }
