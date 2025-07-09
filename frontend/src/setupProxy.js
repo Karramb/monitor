@@ -1,17 +1,19 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
+const target = process.env.API_BASE_URL || 'http://monitor:8000';
+
 module.exports = function(app) {
   app.use(
-    '/api',
+    ['/api', '/media'],
     createProxyMiddleware({
-      target: 'http://monitor:8000',
+      target,
       changeOrigin: true,
       logLevel: 'debug',
       onProxyReq: (proxyReq) => {
-        console.log('Proxying request to:', proxyReq.path);
+        console.log('Proxying:', proxyReq.path); // Логирование для отладки
       },
-      onError: (err) => {
-        console.error('Proxy error:', err);
+      pathRewrite: {
+        '^/media': '/media' // Явно указываем перезапись пути
       }
     })
   );

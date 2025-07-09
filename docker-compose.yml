@@ -34,10 +34,13 @@ services:
     volumes:
       - ./monitor:/app
       - ./frontend/build:/app/build
+      - ./monitor/media/:/app/media:rw
 
   frontend:
     build: ./frontend
     container_name: frontend
+    env_file:
+      - .env
     ports:
       - "4000:3000"
     depends_on:
