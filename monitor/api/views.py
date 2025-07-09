@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework import generics, mixins, serializers, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.renderers import JSONRenderer
@@ -46,6 +46,54 @@ class BacklogViewSet(viewsets.ModelViewSet):
         full_serializer = self.get_serializer(backlog)
         headers = self.get_success_headers(full_serializer.data)
         return Response(full_serializer.data, status=201, headers=headers)
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        
+        # Сохраняем основные данные
+        backlog = serializer.save()
+        
+        # Обрабатываем новые вложения
+        if 'attachments' in request.FILES:
+            for file in request.FILES.getlist('attachments'):
+                BacklogAttachment.objects.create(backlog=backlog, file=file)
+        
+        # Возвращаем обновленные данные
+        full_serializer = self.get_serializer(backlog)
+        return Response(full_serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['delete'], url_path='attachments/(?P<attachment_id>[^/.]+)')
+    def delete_attachment(self, request, pk=None, attachment_id=None):
+        """Удаление файла из задачи"""
+        backlog = self.get_object()
+        
+        # Проверяем права на редактирование
+        if backlog.author != request.user:
+            return Response(
+                {'error': 'У вас нет прав на удаление файлов из этой задачи'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        attachment = get_object_or_404(BacklogAttachment, id=attachment_id, backlog=backlog)
+        
+        # Удаляем файл с диска (если нужно)
+        if attachment.file:
+            try:
+                attachment.file.delete(save=False)
+            except Exception as e:
+                print(f"Ошибка удаления файла: {e}")
+        
+        # Удаляем запись из базы данных
+        attachment.delete()
+        
+        return Response({'message': 'Файл успешно удален'}, status=status.HTTP_200_OK)
 
 
 class CommentViewSet(mixins.CreateModelMixin,
