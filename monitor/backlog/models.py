@@ -65,7 +65,7 @@ class BacklogAttachment(models.Model):
     backlog = models.ForeignKey(
         Backlog, related_name='attachments', on_delete=models.CASCADE
     )
-    file = models.FileField(upload_to='backlog_attachments/')
+    file = models.FileField(upload_to='media/backlog_attachments/')
 
     class Meta:
         ordering = ('id',)
@@ -108,7 +108,7 @@ class CommentAttachment(models.Model):
     comment = models.ForeignKey(
         Comment, related_name='attachments', on_delete=models.CASCADE
     )
-    file = models.FileField(upload_to='comment_attachments/')
+    file = models.FileField(upload_to='media/comment_attachments/')
 
     class Meta:
         ordering = ('id',)
