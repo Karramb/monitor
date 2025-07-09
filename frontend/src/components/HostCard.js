@@ -20,8 +20,9 @@ const HostCard = ({ host }) => {
   const [status, setStatus] = useState('');
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(null);  // <--- новое состояние
-  const [lastCommit, setLastCommit] = useState(null);  // <--- новое состояние
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [lastCommit, setLastCommit] = useState(null);
+  const [commitHash, setCommitHash] = useState(null);  // <--- новое состояние
 
   const socketRef = useRef(null);
   const mountedRef = useRef(true);
@@ -42,9 +43,10 @@ const HostCard = ({ host }) => {
     if (data?.config_status) setStatus(data.config_status);
     if (data?.error) showAlert('error', data.error);
 
-    // Обновляем даты, если есть
+    // Обновляем даты и хеш коммита, если есть
     if (data?.last_update) setLastUpdate(data.last_update);
     if (data?.last_commit) setLastCommit(data.last_commit);
+    if (data?.commitHash) setCommitHash(data.commitHash);  // <--- новая строка
 
     // Логика спиннера по action
     if (data?.action) {
@@ -191,7 +193,11 @@ const HostCard = ({ host }) => {
           />
         </Box>
 
-        <UpdateInfo lastUpdate={lastUpdate} lastCommit={lastCommit} />
+        <UpdateInfo 
+          lastUpdate={lastUpdate} 
+          lastCommit={lastCommit} 
+          commitHash={commitHash}  // <--- передаем commitHash
+        />
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           <Button

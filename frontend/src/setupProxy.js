@@ -1,6 +1,6 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-const target = process.env.API_BASE_URL || 'http://monitor:8000';
+const target = process.env.API_BASE_URL || 'http://localhost:8000';
 
 module.exports = function(app) {
   app.use(

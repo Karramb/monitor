@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
@@ -109,8 +110,18 @@ class GitlabWebhookView(APIView):
         object_attributes = request.data.get('object_attributes', {})
         commit_sha = object_attributes.get('sha', '')[:8]
         commit_time = object_attributes.get('finished_at', '')
+        if commit_sha is None or commit_time is None:
+            return Response({'status': 'received'})
 
-        print(f"Commit: {commit_sha}, Finished at: {commit_time}")
+        try:
+            commit_time = datetime.strptime(commit_time, '%Y-%m-%d %H:%M:%S %Z')
+        except (ValueError, TypeError) as e:
+            return Response({'status': 'received (invalid date format)'})
+
+        SSHHost.objects.all().update(
+            last_commit=commit_time,
+            commit=commit_sha
+        )
         return Response({'status': 'received'})
 
 
