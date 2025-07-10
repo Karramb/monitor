@@ -34,5 +34,5 @@ urlpatterns = [
     path('auth/csrf/', CsrfTokenView.as_view(), name='csrf-token'),
     path('auth/registration/', RegistrationAPIView.as_view(), name='api-registration'),
     path('users/me/', current_user),
-    path('', include(router.urls)),  # Подключаем роутер с API для бэклога, групп и тегов
+    path('', include(router.urls)),
 ]
