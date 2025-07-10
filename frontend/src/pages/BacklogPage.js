@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Button, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Select, MenuItem, FormControl, InputLabel
+  TableHead, TableRow, Paper, Select, MenuItem, FormControl, InputLabel,
+  Typography, Card, CardContent, Fade, Grow, Avatar, Tooltip
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { 
+  Add as AddIcon, 
+  FilterList as FilterIcon, 
+  Assignment as AssignmentIcon,
+  CheckCircle as CheckCircleIcon,
+  Schedule as ScheduleIcon,
+  PlayArrow as PlayArrowIcon,
+  Create as CreateIcon
+} from '@mui/icons-material';
 
 function BacklogPage() {
   const navigate = useNavigate();
@@ -41,15 +51,40 @@ function BacklogPage() {
   const getStatusInfo = (status) => {
     switch (status) {
       case 'Create':
-        return { text: 'Создана', color: '#000000', bgColor: '#ffffff' };
+        return { 
+          text: 'Создана', 
+          color: '#1976d2', 
+          bgColor: '#e3f2fd',
+          icon: <CreateIcon sx={{ fontSize: 14 }} />
+        };
       case 'Accepted':
-        return { text: 'Принята', color: '#000000', bgColor: '#fff2cc' };
+        return { 
+          text: 'Принята', 
+          color: '#f57c00', 
+          bgColor: '#fff3e0',
+          icon: <PlayArrowIcon sx={{ fontSize: 14 }} />
+        };
       case 'In_test':
-        return { text: 'В тесте', color: '#000000', bgColor: '#fce5cd' };
+        return { 
+          text: 'В тесте', 
+          color: '#7b1fa2', 
+          bgColor: '#f3e5f5',
+          icon: <ScheduleIcon sx={{ fontSize: 14 }} />
+        };
       case 'Done':
-        return { text: 'Выполнена', color: '#000000', bgColor: '#d9ead3' };
+        return { 
+          text: 'Выполнена', 
+          color: '#388e3c', 
+          bgColor: '#e8f5e8',
+          icon: <CheckCircleIcon sx={{ fontSize: 14 }} />
+        };
       default:
-        return { text: status || '—', color: '#000000', bgColor: '#ffffff' };
+        return { 
+          text: status || '—', 
+          color: '#666666', 
+          bgColor: '#f5f5f5',
+          icon: <AssignmentIcon sx={{ fontSize: 14 }} />
+        };
     }
   };
 
@@ -61,117 +96,343 @@ function BacklogPage() {
     );
   });
 
-  // Функция для перехода на страницу создания задачи
   const handleCreateClick = () => {
     navigate('/backlog/new');
   };
 
+  const getStatusStats = () => {
+    const stats = {
+      total: filteredTasks.length,
+      create: filteredTasks.filter(t => t.status === 'Create').length,
+      accepted: filteredTasks.filter(t => t.status === 'Accepted').length,
+      in_test: filteredTasks.filter(t => t.status === 'In_test').length,
+      done: filteredTasks.filter(t => t.status === 'Done').length
+    };
+    return stats;
+  };
+
+  const stats = getStatusStats();
+
   return (
-    <Box sx={{ padding: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <h2>Backlog</h2>
-        <Button variant="contained" color="primary" onClick={handleCreateClick}>
-          Создать задачу
-        </Button>
-      </Box>
+    <Box sx={{ 
+      padding: 3, 
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      minHeight: '100vh'
+    }}>
+      {/* Header Card */}
+      <Fade in timeout={800}>
+        <Card sx={{ 
+          mb: 3, 
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          borderRadius: 3
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar sx={{ 
+                  bgcolor: '#1976d2', 
+                  width: 48, 
+                  height: 48,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                }}>
+                  <AssignmentIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 700, 
+                    color: '#1a1a1a',
+                    mb: 0.5
+                  }}>
+                    Backlog
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    Управление задачами проекта
+                  </Typography>
+                </Box>
+              </Box>
+              <Button 
+                variant="contained" 
+                size="large"
+                startIcon={<AddIcon />}
+                onClick={handleCreateClick}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  px: 3,
+                  py: 1.5,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 16px rgba(102,126,234,0.4)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(102,126,234,0.5)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                Создать задачу
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Fade>
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Статус</InputLabel>
-          <Select value={selectedStatus} label="Статус" onChange={handleStatusChange}>
-            <MenuItem value="">Все</MenuItem>
-            <MenuItem value="Create">Создана</MenuItem>
-            <MenuItem value="In_test">В тесте</MenuItem>
-            <MenuItem value="Accepted">Принята</MenuItem>
-            <MenuItem value="Done">Выполнена</MenuItem>
-          </Select>
-        </FormControl>
+      {/* Stats Cards */}
+      <Fade in timeout={1000}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          <Card sx={{ 
+            flex: 1, 
+            minWidth: 120,
+            background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 700 }}>
+                {stats.total}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#1976d2' }}>
+                Всего
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ 
+            flex: 1, 
+            minWidth: 120,
+            background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="h6" sx={{ color: '#388e3c', fontWeight: 700 }}>
+                {stats.done}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#388e3c' }}>
+                Выполнено
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card sx={{ 
+            flex: 1, 
+            minWidth: 120,
+            background: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="h6" sx={{ color: '#7b1fa2', fontWeight: 700 }}>
+                {stats.in_test}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#7b1fa2' }}>
+                В тесте
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+      </Fade>
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Группа</InputLabel>
-          <Select value={selectedGroup} label="Группа" onChange={handleGroupChange}>
-            <MenuItem value="">Все</MenuItem>
-            {groups.map(group => (
-              <MenuItem key={group.id} value={group.id}>
-                {group.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      {/* Filters Card */}
+      <Grow in timeout={1200}>
+        <Card sx={{ 
+          mb: 3,
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 2,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <FilterIcon sx={{ color: '#666' }} />
+              <Typography variant="h6" sx={{ color: '#333', fontWeight: 600 }}>
+                Фильтры
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Статус</InputLabel>
+                <Select 
+                  value={selectedStatus} 
+                  label="Статус" 
+                  onChange={handleStatusChange}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">Все</MenuItem>
+                  <MenuItem value="Create">Создана</MenuItem>
+                  <MenuItem value="In_test">В тесте</MenuItem>
+                  <MenuItem value="Accepted">Принята</MenuItem>
+                  <MenuItem value="Done">Выполнена</MenuItem>
+                </Select>
+              </FormControl>
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Тег</InputLabel>
-          <Select value={selectedTag} label="Тег" onChange={handleTagChange}>
-            <MenuItem value="">Все</MenuItem>
-            {tags.map(tag => (
-              <MenuItem key={tag.id} value={tag.id}>
-                {tag.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Группа</InputLabel>
+                <Select 
+                  value={selectedGroup} 
+                  label="Группа" 
+                  onChange={handleGroupChange}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">Все</MenuItem>
+                  {groups.map(group => (
+                    <MenuItem key={group.id} value={group.id}>
+                      {group.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-      <TableContainer component={Paper}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Тема</TableCell>
-              <TableCell sx={{ width: 100 }}>Группа</TableCell>
-              <TableCell sx={{ width: 160 }}>Теги</TableCell>
-              <TableCell sx={{ width: 110 }}>Статус</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTasks.map(task => {
-              const groupName = groupMap.get(task.groups) || '—';
-              return (
-                <TableRow key={task.id}>
-                  <TableCell>{task.id}</TableCell>
-                  <TableCell>
-                    <Link to={`/backlog/${task.id}`} style={{
-                      color: '#2a5885', textDecoration: 'none', fontWeight: 500
-                    }}>
-                      {task.theme}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{groupName}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {task.tags.map(tagId => {
-                        const tag = tags.find(t => t.id === tagId);
-                        return tag ? (
-                          <Chip
-                            key={tag.id}
-                            label={tag.name}
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Тег</InputLabel>
+                <Select 
+                  value={selectedTag} 
+                  label="Тег" 
+                  onChange={handleTagChange}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">Все</MenuItem>
+                  {tags.map(tag => (
+                    <MenuItem key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </CardContent>
+        </Card>
+      </Grow>
+
+      {/* Tasks Table */}
+      <Fade in timeout={1400}>
+        <Card sx={{ 
+          background: 'rgba(255,255,255,0.98)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 2,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ 
+                  background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+                }}>
+                  <TableCell sx={{ fontWeight: 700, color: '#333' }}>ID</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: '#333' }}>Тема</TableCell>
+                  <TableCell sx={{ width: 100, fontWeight: 700, color: '#333' }}>Группа</TableCell>
+                  <TableCell sx={{ width: 160, fontWeight: 700, color: '#333' }}>Теги</TableCell>
+                  <TableCell sx={{ width: 110, fontWeight: 700, color: '#333' }}>Статус</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredTasks.map((task, index) => {
+                  const groupName = groupMap.get(task.groups) || '—';
+                  const statusInfo = getStatusInfo(task.status);
+                  
+                  return (
+                    <Grow in timeout={800 + index * 100} key={task.id}>
+                      <TableRow 
+                        sx={{ 
+                          '&:hover': { 
+                            backgroundColor: '#f8f9fa',
+                            transform: 'scale(1.01)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                          },
+                          transition: 'all 0.2s ease',
+                          '&:nth-of-type(odd)': {
+                            backgroundColor: 'rgba(0,0,0,0.02)'
+                          }
+                        }}
+                      >
+                        <TableCell>
+                          <Chip 
+                            label={`#${task.id}`}
                             size="small"
-                            sx={{
-                              backgroundColor: tag.color,
-                              fontSize: '0.7rem',
-                              height: 22,
-                              borderRadius: '3px'
+                            sx={{ 
+                              backgroundColor: '#e3f2fd',
+                              color: '#1976d2',
+                              fontWeight: 600,
+                              fontSize: '0.75rem'
                             }}
                           />
-                        ) : null;
-                      })}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{
-                      px: 1, py: 0.3, borderRadius: '3px', fontSize: '0.75rem',
-                      fontWeight: 500, backgroundColor: getStatusInfo(task.status).bgColor,
-                      color: getStatusInfo(task.status).color, border: '1px solid #d0d0d0'
-                    }}>
-                      {getStatusInfo(task.status).text}
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/backlog/${task.id}`} style={{
+                            color: '#1976d2', 
+                            textDecoration: 'none', 
+                            fontWeight: 500,
+                            fontSize: '0.9rem'
+                          }}>
+                            {task.theme}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={groupName}
+                            size="small"
+                            variant="outlined"
+                            sx={{ 
+                              fontSize: '0.75rem',
+                              borderRadius: 2
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {task.tags.map(tagId => {
+                              const tag = tags.find(t => t.id === tagId);
+                              return tag ? (
+                                <Tooltip title={tag.name} key={tag.id}>
+                                  <Chip
+                                    label={tag.name}
+                                    size="small"
+                                    sx={{
+                                      backgroundColor: tag.color,
+                                      fontSize: '0.7rem',
+                                      height: 22,
+                                      borderRadius: 2,
+                                      fontWeight: 500,
+                                      '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                      },
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  />
+                                </Tooltip>
+                              ) : null;
+                            })}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            px: 1.5, 
+                            py: 0.5, 
+                            borderRadius: 2, 
+                            fontSize: '0.75rem',
+                            fontWeight: 600, 
+                            backgroundColor: statusInfo.bgColor,
+                            color: statusInfo.color,
+                            border: `1px solid ${statusInfo.color}20`,
+                            width: 'fit-content'
+                          }}>
+                            {statusInfo.icon}
+                            {statusInfo.text}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    </Grow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      </Fade>
     </Box>
   );
 }
