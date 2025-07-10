@@ -12,10 +12,15 @@ import {
   Checkbox,
   ListItemText,
   IconButton,
+  Paper,
+  Grid,
+  Stack
 } from '@mui/material';
+import NoteAddIcon from '@mui/icons-material/NoteAdd';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 const STATUS_OPTIONS = [
   { value: 'Create', label: 'Создана' },
@@ -79,9 +84,9 @@ const BacklogCreatePage = () => {
           alert('Сессия истекла. Пожалуйста, войдите в систему снова.');
           localStorage.removeItem('token');
           navigate('/login');
-          return;
+        } else {
+          alert('Ошибка при загрузке данных. Попробуйте снова.');
         }
-        alert('Ошибка при загрузке данных. Попробуйте снова.');
       } finally {
         setLoading(false);
       }
@@ -90,13 +95,11 @@ const BacklogCreatePage = () => {
     fetchData();
   }, [navigate]);
 
-  // Добавляем файлы, не заменяя существующие
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setAttachments(prev => [...prev, ...files]);
   };
 
-  // Удаление отдельного файла из списка
   const handleRemoveAttachment = (index) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
@@ -122,7 +125,7 @@ const BacklogCreatePage = () => {
     formData.append('text', text);
     formData.append('groups', groupId);
     selectedTags.forEach(tagId => formData.append('tags', tagId));
-    attachments.forEach(file => formData.append('attachments', file)); // Обрати внимание на 'attachments' (множественное)
+    attachments.forEach(file => formData.append('attachments', file));
 
     try {
       const csrfToken = getCsrfToken();
@@ -130,7 +133,6 @@ const BacklogCreatePage = () => {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data',
       };
-
       if (csrfToken) {
         headers['X-CSRFToken'] = csrfToken;
       }
@@ -141,17 +143,14 @@ const BacklogCreatePage = () => {
       navigate('/backlog');
     } catch (error) {
       console.error('Ошибка при создании задачи:', error);
-
       if (error.response?.status === 401) {
         alert('Сессия истекла. Пожалуйста, войдите в систему снова.');
         localStorage.removeItem('token');
         navigate('/login');
       } else if (error.response?.status === 403) {
-        alert('Недостаточно прав для создания задачи. Попробуйте обновить страницу.');
-        console.log('Response data:', error.response.data);
+        alert('Недостаточно прав для создания задачи.');
       } else if (error.response?.status === 400) {
         alert('Ошибка в данных формы. Проверьте все поля.');
-        console.log('Validation errors:', error.response.data);
       } else {
         alert('Ошибка при создании задачи. Попробуйте снова.');
       }
@@ -162,124 +161,149 @@ const BacklogCreatePage = () => {
 
   return (
     <Box maxWidth="md" mx="auto" p={2}>
-      <Typography variant="h5" gutterBottom>Создать задачу</Typography>
-      <form onSubmit={handleSubmit} encType="multipart/form-data">
-        <TextField
-          label="Тема"
-          fullWidth
-          margin="normal"
-          value={theme}
-          onChange={e => setTheme(e.target.value)}
-          required
-        />
+      <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={3}>
+          <NoteAddIcon color="primary" fontSize="large" />
+          <Typography variant="h5">Создать задачу</Typography>
+        </Stack>
 
-        <FormControl fullWidth margin="normal">
-          <InputLabel id="status-label">Статус</InputLabel>
-          <Select
-            labelId="status-label"
-            value={status}
-            label="Статус"
-            onChange={e => setStatus(e.target.value)}
-            required
-          >
-            {STATUS_OPTIONS.map(option => (
-              <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <form onSubmit={handleSubmit} encType="multipart/form-data">
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                label="Тема"
+                placeholder="Кратко опишите суть задачи"
+                fullWidth
+                value={theme}
+                onChange={e => setTheme(e.target.value)}
+                required
+              />
+            </Grid>
 
-        <TextField
-          label="Описание"
-          fullWidth
-          multiline
-          rows={4}
-          margin="normal"
-          value={text}
-          onChange={e => setText(e.target.value)}
-          required
-        />
-
-        <FormControl fullWidth margin="normal">
-          <InputLabel id="group-label">Группа</InputLabel>
-          <Select
-            labelId="group-label"
-            value={groupId}
-            label="Группа"
-            onChange={e => setGroupId(e.target.value)}
-            required
-          >
-            {groups.map(g => (
-              <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl fullWidth margin="normal">
-          <InputLabel id="tags-label">Теги</InputLabel>
-          <Select
-            labelId="tags-label"
-            multiple
-            value={selectedTags}
-            onChange={e => setSelectedTags(e.target.value)}
-            input={<OutlinedInput label="Теги" />}
-            renderValue={(selected) =>
-              tags
-                .filter(t => selected.includes(t.id))
-                .map(t => t.name)
-                .join(', ')
-            }
-          >
-            {tags.map(tag => (
-              <MenuItem key={tag.id} value={tag.id}>
-                <Checkbox checked={selectedTags.indexOf(tag.id) > -1} />
-                <Box
-                  sx={{
-                    width: 14,
-                    height: 14,
-                    bgcolor: tag.color || '#ccc',
-                    mr: 1,
-                    borderRadius: '2px',
-                    border: '1px solid #999',
-                  }}
-                />
-                <ListItemText primary={tag.name} />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <Button variant="contained" component="label" sx={{ mt: 2 }}>
-          Загрузить файлы
-          <input type="file" hidden multiple onChange={handleFileChange} />
-        </Button>
-
-        {attachments.length > 0 && (
-          <Box mt={1}>
-            <Typography variant="body2">Выбранные файлы:</Typography>
-            {attachments.map((file, index) => (
-              <Box key={index} display="flex" alignItems="center" mt={0.5}>
-                <Typography variant="body2" noWrap sx={{ maxWidth: '80%' }}>
-                  {file.name}
-                </Typography>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => handleRemoveAttachment(index)}
-                  aria-label="Удалить файл"
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="status-label">Статус</InputLabel>
+                <Select
+                  labelId="status-label"
+                  value={status}
+                  label="Статус"
+                  onChange={e => setStatus(e.target.value)}
+                  required
                 >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            ))}
-          </Box>
-        )}
+                  {STATUS_OPTIONS.map(option => (
+                    <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
 
-        <Box mt={3}>
-          <Button type="submit" variant="contained" color="primary">
-            Создать
-          </Button>
-        </Box>
-      </form>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel id="group-label">Группа</InputLabel>
+                <Select
+                  labelId="group-label"
+                  value={groupId}
+                  label="Группа"
+                  onChange={e => setGroupId(e.target.value)}
+                  required
+                >
+                  {groups.map(g => (
+                    <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                label="Описание"
+                placeholder="Подробное описание задачи"
+                fullWidth
+                multiline
+                rows={4}
+                value={text}
+                onChange={e => setText(e.target.value)}
+                required
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel id="tags-label">Теги</InputLabel>
+                <Select
+                  labelId="tags-label"
+                  multiple
+                  value={selectedTags}
+                  onChange={e => setSelectedTags(e.target.value)}
+                  input={<OutlinedInput label="Теги" />}
+                  renderValue={(selected) =>
+                    tags
+                      .filter(t => selected.includes(t.id))
+                      .map(t => t.name)
+                      .join(', ')
+                  }
+                >
+                  {tags.map(tag => (
+                    <MenuItem key={tag.id} value={tag.id}>
+                      <Checkbox checked={selectedTags.includes(tag.id)} />
+                      <Box
+                        sx={{
+                          width: 14,
+                          height: 14,
+                          bgcolor: tag.color || '#ccc',
+                          mr: 1,
+                          borderRadius: '2px',
+                          border: '1px solid #999',
+                        }}
+                      />
+                      <ListItemText primary={tag.name} />
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<CloudUploadIcon />}
+              >
+                Загрузить файлы
+                <input type="file" hidden multiple onChange={handleFileChange} />
+              </Button>
+            </Grid>
+
+            {attachments.length > 0 && (
+              <Grid item xs={12}>
+                <Stack spacing={1}>
+                  <Typography variant="body2">Выбранные файлы:</Typography>
+                  {attachments.map((file, index) => (
+                    <Box key={index} display="flex" alignItems="center">
+                      <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>
+                        {file.name}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleRemoveAttachment(index)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Stack>
+              </Grid>
+            )}
+
+            <Grid item xs={12}>
+              <Button type="submit" variant="contained" size="large" fullWidth>
+                Создать
+              </Button>
+            </Grid>
+          </Grid>
+        </form>
+      </Paper>
     </Box>
   );
 };
