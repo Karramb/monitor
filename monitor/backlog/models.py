@@ -8,8 +8,8 @@ User = get_user_model()
 
 
 class Tag(models.Model):
-    name = models.CharField(max_length=16)
-    color = models.CharField(max_length=16, choices=CHOICES_TAG)
+    name = models.CharField(max_length=16, verbose_name='Наименование')
+    color = models.CharField(max_length=16, verbose_name='Цвет', choices=CHOICES_TAG)
 
     class Meta:
         ordering = ('name',)
@@ -21,7 +21,7 @@ class Tag(models.Model):
 
 
 class Group(models.Model):
-    name = models.CharField(max_length=16)
+    name = models.CharField(max_length=16, verbose_name='Наименование')
 
     class Meta:
         ordering = ('name',)
@@ -33,10 +33,10 @@ class Group(models.Model):
 
 
 class Backlog(models.Model):
-    theme = models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=16, choices=CHOICES_STATUS)
-    text = models.TextField()
+    theme = models.CharField(max_length=100, verbose_name='Тема')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    status = models.CharField(max_length=16, verbose_name='Статус', choices=CHOICES_STATUS)
+    text = models.TextField(verbose_name='Текст',)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -63,9 +63,9 @@ class Backlog(models.Model):
 
 class BacklogAttachment(models.Model):
     backlog = models.ForeignKey(
-        Backlog, related_name='attachments', on_delete=models.CASCADE
+        Backlog, related_name='attachments', on_delete=models.CASCADE, verbose_name='Задача'
     )
-    file = models.FileField(upload_to='media/backlog_attachments/')
+    file = models.FileField(upload_to='media/backlog_attachments/', verbose_name='Файл')
 
     class Meta:
         ordering = ('id',)
@@ -86,8 +86,8 @@ class Comment(models.Model):
         related_name='comments',
         verbose_name='Автор'
     )
-    text = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    text = models.TextField(verbose_name='Текст',)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     backlog = models.ForeignKey(
         Backlog,
         on_delete=models.CASCADE,
@@ -106,9 +106,9 @@ class Comment(models.Model):
 
 class CommentAttachment(models.Model):
     comment = models.ForeignKey(
-        Comment, related_name='attachments', on_delete=models.CASCADE
+        Comment, related_name='attachments', on_delete=models.CASCADE, verbose_name='Комментарий'
     )
-    file = models.FileField(upload_to='media/comment_attachments/')
+    file = models.FileField(upload_to='media/comment_attachments/', verbose_name='Файл')
 
     class Meta:
         ordering = ('id',)

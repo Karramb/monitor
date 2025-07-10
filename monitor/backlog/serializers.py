@@ -63,5 +63,5 @@ class BacklogSerializer(serializers.ModelSerializer):
         fields = ['id', 'author', 'groups', 'tags', 'theme', 'text', 'status', 'attachments', 'comments', 'created_at']
     
     def get_comments(self, obj):
-        comments = obj.comments.all().order_by('-created_at')
+        comments = obj.comments.all()
         return CommentSerializer(comments, many=True).data

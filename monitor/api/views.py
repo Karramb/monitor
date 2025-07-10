@@ -38,7 +38,7 @@ class BacklogViewSet(viewsets.ModelViewSet):
             print("Validation errors:", serializer.errors)
             return Response(serializer.errors, status=400)
 
-        backlog = serializer.save(author=request.user)  # <-- сохрани результат
+        backlog = serializer.save(author=request.user)
 
         for file in request.FILES.getlist('attachments'):
             BacklogAttachment.objects.create(backlog=backlog, file=file)
@@ -53,15 +53,12 @@ class BacklogViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         
-        # Сохраняем основные данные
         backlog = serializer.save()
         
-        # Обрабатываем новые вложения
         if 'attachments' in request.FILES:
             for file in request.FILES.getlist('attachments'):
                 BacklogAttachment.objects.create(backlog=backlog, file=file)
         
-        # Возвращаем обновленные данные
         full_serializer = self.get_serializer(backlog)
         return Response(full_serializer.data)
     
@@ -71,10 +68,8 @@ class BacklogViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['delete'], url_path='attachments/(?P<attachment_id>[^/.]+)')
     def delete_attachment(self, request, pk=None, attachment_id=None):
-        """Удаление файла из задачи"""
         backlog = self.get_object()
         
-        # Проверяем права на редактирование
         if backlog.author != request.user:
             return Response(
                 {'error': 'У вас нет прав на удаление файлов из этой задачи'}, 
@@ -119,7 +114,6 @@ class CommentViewSet(mixins.CreateModelMixin,
 
         comment = serializer.instance  # объект созданного комментария
 
-        # Сохраняем вложения
         for file in request.FILES.getlist('attachments'):
             CommentAttachment.objects.create(comment=comment, file=file)
 
@@ -142,12 +136,14 @@ class TagViewSet(viewsets.ModelViewSet):
 class SSHHostListAPIView(generics.ListAPIView):
     queryset = SSHHost.objects.all()
     serializer_class = SSHHostSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = []
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class SSHHostDetailAPIView(generics.RetrieveAPIView):
     queryset = SSHHost.objects.all()
     serializer_class = SSHHostSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class GitlabWebhookView(APIView):
@@ -159,7 +155,7 @@ class GitlabWebhookView(APIView):
         commit_sha = object_attributes.get('sha', '')[:8]
         commit_time = object_attributes.get('finished_at', '')
         if commit_sha is None or commit_time is None:
-            return Response({'status': 'received'})
+            return Response({'status': 'received (None)'})
 
         try:
             commit_time = datetime.strptime(commit_time, '%Y-%m-%d %H:%M:%S %Z')
