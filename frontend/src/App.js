@@ -24,7 +24,7 @@ function App() {
             <Route index element={<HostListPage />} />
             <Route path="backlog" element={<BacklogPage />} />
             <Route path="backlog/:id" element={<BacklogItemPage />} />
-            <Route path="/backlog/new" element={<BacklogCreatePage />} />
+            <Route path="backlog/new" element={<BacklogCreatePage />} />
           </Route>
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/registration" element={<RegisterPage />} />
