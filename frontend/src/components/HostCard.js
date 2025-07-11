@@ -12,17 +12,20 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import StorageIcon from '@mui/icons-material/Storage';
 import BoltIcon from '@mui/icons-material/Bolt';
 import CachedIcon from '@mui/icons-material/Cached';
+import InfoIcon from '@mui/icons-material/Info';
+import { useNavigate } from 'react-router-dom';
 
 import UpdateInfo from './UpdateInfo';
 import LoadingOverlay from './LoadingOverlay';
 
 const HostCard = ({ host }) => {
+  const navigate = useNavigate();
   const [status, setStatus] = useState('');
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [lastCommit, setLastCommit] = useState(null);
-  const [commitHash, setCommitHash] = useState(null);  // <--- новое состояние
+  const [commitHash, setCommitHash] = useState(null);
 
   const socketRef = useRef(null);
   const mountedRef = useRef(true);
@@ -43,12 +46,10 @@ const HostCard = ({ host }) => {
     if (data?.config_status) setStatus(data.config_status);
     if (data?.error) showAlert('error', data.error);
 
-    // Обновляем даты и хеш коммита, если есть
     if (data?.last_update) setLastUpdate(data.last_update);
     if (data?.last_commit) setLastCommit(data.last_commit);
-    if (data?.commitHash) setCommitHash(data.commitHash);  // <--- новая строка
+    if (data?.commitHash) setCommitHash(data.commitHash);
 
-    // Логика спиннера по action
     if (data?.action) {
       if (data.action.endsWith('_started')) {
         setLoading(true);
@@ -76,7 +77,6 @@ const HostCard = ({ host }) => {
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
-      // Таймаут подключения
       const timeout = setTimeout(() => {
         if (ws.readyState === WebSocket.CONNECTING) {
           console.error("WebSocket connection timeout");
@@ -172,17 +172,50 @@ const HostCard = ({ host }) => {
   };
 
   return (
-    <Card sx={{ width: 430, mb: 2, mr: 2, position: 'relative' }}>
-      <CardContent sx={{ p: 2 }}>
-        <Typography variant="subtitle1" component="div" sx={{ 
-          fontWeight: 'bold',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          mb: 1.5
+    <Card sx={{ 
+      width: 430, 
+      mb: 2, 
+      mr: 2, 
+      position: 'relative', 
+      display: 'flex', 
+      flexDirection: 'column'
+    }}>
+      <CardContent sx={{ p: 2, flexGrow: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 1.5 
         }}>
-          {host.name}
-        </Typography>
+          <Typography 
+            variant="subtitle1" 
+            component="div" 
+            sx={{ 
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '70%'
+            }}
+          >
+            {host.name}
+          </Typography>
+          {commitHash && (
+            <Typography 
+              variant="caption" 
+              sx={{
+                fontFamily: 'monospace',
+                backgroundColor: 'rgba(0, 0, 0, 0.20)',
+                px: 1,
+                borderRadius: 1,
+                whiteSpace: 'nowrap',
+                color: 'text.secondary'
+              }}
+            >
+              {commitHash.substring(0, 8)}
+            </Typography>
+          )}
+        </Box>
 
         <Box sx={{ mb: 1 }}>
           <Chip 
@@ -196,10 +229,9 @@ const HostCard = ({ host }) => {
         <UpdateInfo 
           lastUpdate={lastUpdate} 
           lastCommit={lastCommit} 
-          commitHash={commitHash}  // <--- передаем commitHash
         />
 
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
           <Button
             variant="contained"
             size="small"
@@ -254,6 +286,26 @@ const HostCard = ({ host }) => {
           </Box>
         )}
       </CardContent>
+
+      <Button
+        variant="outlined"
+        fullWidth
+        startIcon={<InfoIcon />}
+        onClick={() => navigate(`/hosts/${host.id}`)}
+        sx={{
+          borderRadius: '0 0 4px 4px',
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          py: 1,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          '&:hover': {
+            backgroundColor: 'action.hover'
+          }
+        }}
+      >
+        Подробнее
+      </Button>
 
       {loading && <LoadingOverlay />}
     </Card>

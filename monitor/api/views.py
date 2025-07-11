@@ -4,6 +4,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework import generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.renderers import JSONRenderer
@@ -14,6 +15,8 @@ from backlog.models import Backlog, BacklogAttachment, Comment, CommentAttachmen
 from backlog.serializers import BacklogSerializer, CommentSerializer, GroupSerializer, TagSerializer
 from core.models import SSHHost
 from core.serializers import SSHHostSerializer
+from messages_code.models import MessagesCode
+from messages_code.serializers import MessagesCodeSerializer
 from users.serializers import UserRegistrationSerializer, UserSerializer
 
 
@@ -148,7 +151,7 @@ class SSHHostDetailAPIView(generics.RetrieveAPIView):
 
 class GitlabWebhookView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, *args, **kwargs):
         object_attributes = request.data.get('object_attributes', {})
@@ -203,5 +206,58 @@ class RegistrationAPIView(generics.CreateAPIView):
                     "status": "error",
                     "errors": e.detail
                 },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ExecuteCodeView(APIView):
+    authentication_classes = []
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def post(self, request, pk):
+        try:
+            code_obj = MessagesCode.objects.get(pk=pk, user=request.user)
+            
+            if 'template_message' not in code_obj.variables:
+                raise ValidationError(
+                    {"variables": "Необходим ключ 'template_message' в variables"},
+                    code="missing_template_message"
+                )
+            
+            execution_globals = {
+                'template_message': code_obj.variables['template_message'].copy(),
+                '__builtins__': {  # Функции доступные в коде для выполнения
+                    'print': print,
+                    'range': range,
+                    'int': int,
+                    'float': float,
+                    'str': str,
+                    'bool': bool,
+                }
+            }
+            
+            try:
+                exec(code_obj.code, execution_globals)
+                code_obj.output = "Код выполнен успешно"
+                code_obj.error = None
+            except Exception as e:
+                code_obj.error = f"Ошибка выполнения: {str(e)}"
+                code_obj.output = None
+                raise ValidationError(
+                    {"execution": str(e)},
+                    code="execution_error"
+                )
+            
+            code_obj.save()
+            return Response({"status": "success", "output": code_obj.output})
+            
+        except MessagesCode.DoesNotExist:
+            return Response(
+                {"error": "Code not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return Response(
+                {"error": e.detail},
                 status=status.HTTP_400_BAD_REQUEST
             )

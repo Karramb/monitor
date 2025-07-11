@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'api',
     'backlog',
     'core',
+    'messages_code',
     'users',
 ]
 
