@@ -13,13 +13,14 @@ import StorageIcon from '@mui/icons-material/Storage';
 import BoltIcon from '@mui/icons-material/Bolt';
 import CachedIcon from '@mui/icons-material/Cached';
 import InfoIcon from '@mui/icons-material/Info';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // Добавлен useLocation
 
 import UpdateInfo from './UpdateInfo';
 import LoadingOverlay from './LoadingOverlay';
 
 const HostCard = ({ host }) => {
   const navigate = useNavigate();
+  const location = useLocation(); // Получаем текущий URL
   const [status, setStatus] = useState('');
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -171,6 +172,9 @@ const HostCard = ({ host }) => {
     }
   };
 
+  // Проверяем, находимся ли мы на странице списка хостов (/hosts)
+  const isHostListPage = location.pathname === '/';
+
   return (
     <Card sx={{ 
       width: 430, 
@@ -287,25 +291,28 @@ const HostCard = ({ host }) => {
         )}
       </CardContent>
 
-      <Button
-        variant="outlined"
-        fullWidth
-        startIcon={<InfoIcon />}
-        onClick={() => navigate(`/hosts/${host.id}`)}
-        sx={{
-          borderRadius: '0 0 4px 4px',
-          borderTopLeftRadius: 0,
-          borderTopRightRadius: 0,
-          py: 1,
-          borderTop: '1px solid',
-          borderColor: 'divider',
-          '&:hover': {
-            backgroundColor: 'action.hover'
-          }
-        }}
-      >
-        Подробнее
-      </Button>
+      {/* Кнопка "Подробнее" показывается ТОЛЬКО на странице /hosts */}
+      {isHostListPage && (
+        <Button
+          variant="outlined"
+          fullWidth
+          startIcon={<InfoIcon />}
+          onClick={() => navigate(`/hosts/${host.id}`)}
+          sx={{
+            borderRadius: '0 0 4px 4px',
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            py: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              backgroundColor: 'action.hover'
+            }
+          }}
+        >
+          Подробнее
+        </Button>
+      )}
 
       {loading && <LoadingOverlay />}
     </Card>

@@ -16,7 +16,7 @@ from backlog.serializers import BacklogSerializer, CommentSerializer, GroupSeria
 from core.models import SSHHost
 from core.serializers import SSHHostSerializer
 from messages_code.models import MessagesCode
-from messages_code.serializers import MessagesCodeSerializer
+from messages_code.serializers import MessagesCodeSerializer, MessagesCodeListSerializer
 from users.serializers import UserRegistrationSerializer, UserSerializer
 
 
@@ -210,54 +210,58 @@ class RegistrationAPIView(generics.CreateAPIView):
             )
 
 
-class ExecuteCodeView(APIView):
-    authentication_classes = []
+class MessagesCodeViewSet(viewsets.ModelViewSet):
+    queryset = MessagesCode.objects.all()
+    renderer_classes = [JSONRenderer]
     permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get_serializer_class(self):
+        if self.action in ['list']:
+            return MessagesCodeListSerializer
+        return MessagesCodeSerializer
 
-    def post(self, request, pk):
-        try:
-            code_obj = MessagesCode.objects.get(pk=pk, user=request.user)
-            
-            if 'template_message' not in code_obj.variables:
-                raise ValidationError(
-                    {"variables": "Необходим ключ 'template_message' в variables"},
-                    code="missing_template_message"
-                )
-            
-            execution_globals = {
-                'template_message': code_obj.variables['template_message'].copy(),
-                '__builtins__': {  # Функции доступные в коде для выполнения
-                    'print': print,
-                    'range': range,
-                    'int': int,
-                    'float': float,
-                    'str': str,
-                    'bool': bool,
-                }
+    def get_queryset(self):
+        # Ограничиваем доступ к кодам только пользователя
+        if self.request.user.is_authenticated:
+            return MessagesCode.objects.filter(user=self.request.user)
+        return MessagesCode.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['patch'], url_path='update-variables')
+    def update_variables(self, request, pk=None):
+        code = self.get_object()
+        variables = request.data.get('variables', {})
+        if not isinstance(variables, dict):
+            return Response({'error': 'Variables должны быть объектом'}, status=status.HTTP_400_BAD_REQUEST)
+
+        code.variables = variables
+        code.save(update_fields=['variables'])
+        serializer = self.get_serializer(code)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='execute')
+    def execute(self, request, pk=None):
+        code_obj = self.get_object()
+        if 'template_message' not in code_obj.variables:
+            raise ValidationError({"variables": "Необходим ключ 'template_message' в variables"})
+
+        execution_globals = {
+            'template_message': code_obj.variables['template_message'].copy(),
+            '__builtins__': {
+                'print': print, 'range': range, 'int': int, 'float': float, 'str': str, 'bool': bool,
             }
-            
-            try:
-                exec(code_obj.code, execution_globals)
-                code_obj.output = "Код выполнен успешно"
-                code_obj.error = None
-            except Exception as e:
-                code_obj.error = f"Ошибка выполнения: {str(e)}"
-                code_obj.output = None
-                raise ValidationError(
-                    {"execution": str(e)},
-                    code="execution_error"
-                )
-            
+        }
+        try:
+            exec(code_obj.code, execution_globals)
+            code_obj.output = "Код выполнен успешно"
+            code_obj.error = None
+        except Exception as e:
+            code_obj.error = f"Ошибка выполнения: {str(e)}"
+            code_obj.output = None
             code_obj.save()
-            return Response({"status": "success", "output": code_obj.output})
-            
-        except MessagesCode.DoesNotExist:
-            return Response(
-                {"error": "Code not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except ValidationError as e:
-            return Response(
-                {"error": e.detail},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raise ValidationError({"execution": str(e)})
+
+        code_obj.save()
+        return Response({"status": "success", "output": code_obj.output})
