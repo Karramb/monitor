@@ -20,3 +20,12 @@ class MessagesCodeSerializer(serializers.ModelSerializer):
         if not isinstance(value, dict):
             raise serializers.ValidationError("Variables must be a JSON object")
         return value
+
+
+class MessagesCodeListSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = MessagesCode
+        fields = ['id', 'name', 'user', 'created_at', 'updated_at']
+
