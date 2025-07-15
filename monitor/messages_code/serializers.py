@@ -9,7 +9,7 @@ class MessagesCodeSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     class Meta:
         model = MessagesCode
-        fields = ['id', 'name', 'code', 'variables', 'created_at', 'updated_at', 'output', 'error']
+        fields = ['id', 'user', 'name', 'code', 'variables', 'created_at', 'updated_at', 'output', 'error']
     
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
