@@ -6,7 +6,8 @@ from api.views import (
     CommentViewSet,
     CsrfTokenView, 
     GitlabWebhookView, 
-    RegistrationAPIView, 
+    RegistrationAPIView,
+    MessagesCodeViewSet,
     SSHHostListAPIView, 
     SSHHostDetailAPIView,
     GroupViewSet,
@@ -23,6 +24,8 @@ router.register(
 )
 router.register(r'groups', GroupViewSet, basename='groups')
 router.register(r'tags', TagViewSet, basename='tags')
+router.register(r'messagecode', MessagesCodeViewSet, basename='messagecode')
+
 
 app_name = 'api'
 

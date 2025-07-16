@@ -371,3 +371,73 @@ export const getGroups = async () => {
     throw error;
   }
 };
+
+// Добавьте эти функции в ваш api.js файл
+
+// Получение списка кодов сообщений
+export const getMessagesCodeList = async () => {
+  try {
+    const response = await fetch('/api/messagecode/', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Добавьте авторизацию если необходимо
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Ошибка получения списка кодов');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Ошибка при получении списка кодов:', error);
+    throw error;
+  }
+};
+
+// Получение детальной информации о коде
+export const getMessagesCodeDetail = async (id) => {
+  try {
+    const response = await fetch(`/api/messagecode/${id}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Ошибка получения кода');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Ошибка при получении кода:', error);
+    throw error;
+  }
+};
+
+// Обновление переменных кода
+export const updateMessagesCodeVariables = async (id, variables) => {
+  try {
+    const response = await fetch(`/api/messagecode/${id}/update_variables/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify({ variables }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Ошибка обновления переменных');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Ошибка при обновлении переменных:', error);
+    throw error;
+  }
+};

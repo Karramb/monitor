@@ -8,7 +8,7 @@ import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import useBacklogItem from './useBacklogItem';
+import useBacklogItem from '../hooks/useBacklogItem';
 import { styled } from '@mui/material/styles';
 
 const isImage = (filename) => /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);

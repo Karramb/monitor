@@ -1,9 +1,14 @@
+import builtins
+import json
+import logging
+import time
 from datetime import datetime
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework import generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.renderers import JSONRenderer
@@ -14,7 +19,11 @@ from backlog.models import Backlog, BacklogAttachment, Comment, CommentAttachmen
 from backlog.serializers import BacklogSerializer, CommentSerializer, GroupSerializer, TagSerializer
 from core.models import SSHHost
 from core.serializers import SSHHostSerializer
+from messages_code.models import MessagesCode
+from messages_code.serializers import MessagesCodeSerializer, MessagesCodeListSerializer
 from users.serializers import UserRegistrationSerializer, UserSerializer
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
@@ -148,7 +157,7 @@ class SSHHostDetailAPIView(generics.RetrieveAPIView):
 
 class GitlabWebhookView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, *args, **kwargs):
         object_attributes = request.data.get('object_attributes', {})
@@ -205,3 +214,111 @@ class RegistrationAPIView(generics.CreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class MessagesCodeViewSet(viewsets.ModelViewSet):
+    renderer_classes = [JSONRenderer]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
+    def get_serializer_class(self):
+        logger.debug(f"Getting serializer for action: {self.action}")
+        if self.action in ['list']:
+            return MessagesCodeListSerializer
+        return MessagesCodeSerializer
+
+    def get_queryset(self):
+        logger.info(f"Getting queryset for user: {self.request.user}")
+        if self.request.user.is_authenticated:
+            return MessagesCode.objects.filter(user=self.request.user)
+        logger.warning("Anonymous user access attempt")
+        return MessagesCode.objects.none()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['patch'], url_path='update-variables')
+    def update_variables(self, request, pk=None):
+        code = self.get_object()
+        variables = request.data.get('variables', {})
+        
+        if not isinstance(variables, dict):
+            return Response({'error': 'Variables должны быть объектом'}, status=status.HTTP_400_BAD_REQUEST)
+
+        code.variables = variables
+        code.save(update_fields=['variables'])
+        code.refresh_from_db()
+        print(f"After save - variables: {code.variables}")
+        
+        return Response({'status': 'success', 'variables': code.variables})
+
+    @action(detail=True, methods=['post'], url_path='execute')
+    def execute(self, request, pk=None):
+        code_obj = self.get_object()
+        
+        # Для input-кодов
+        if code_obj.name.startswith('input'):
+            if 'template_message' not in code_obj.variables:
+                raise ValidationError({"variables": "Необходим ключ 'template_message' в variables"})
+
+            execution_globals = {
+                'template_message': code_obj.variables['template_message'].copy(),
+                'code_name': code_obj.name,
+                '__builtins__': {
+                    'print': print, 'range': range, 'int': int, 'float': float, 'str': str,
+                    'bool': bool, 'globals': globals, 'round': round, 'IOError': IOError, 'open': open,
+                    '__import__': __import__,
+                }
+            }
+        # Для output-кодов (10messages)
+        elif code_obj.name.startswith('10messages'):
+            try:
+                variables = request.data.get('variables', {})
+
+                host_id = request.data.get('host_id')
+                if not host_id:
+                    raise ValidationError({"host": "Не указан хост для подключения"})
+                host_obj = SSHHost.objects.filter(id=host_id).first()
+                if not host_obj:
+                    raise ValidationError({"host": "Host с таким id не найден"})
+
+                input_code = request.data.get('input_code_id')
+                if not input_code:
+                    raise ValidationError({"input": "Не указан input-файл для обработки"})
+                input_file = f"{MessagesCode.objects.get(id=input_code).name}.json"
+
+                
+                execution_globals = {
+                    'rabbit_host': host_obj.host,
+                    'input_file': input_file,
+                    'variables': variables,
+                    'code_name': code_obj.name,
+                    '__builtins__': {
+                        'print': print, 'range': range, 'int': int, 'float': float, 'str': str,
+                        'bool': bool, 'globals': globals, 'round': round, 'IOError': IOError, 'open': open,
+                        '__import__': __import__,
+                        'json': json, 'time': time, '__build_class__': builtins.__build_class__,
+                        '__name__': '__main__', 'property': property, 'ValueError': ValueError,
+                        'FileNotFoundError': FileNotFoundError,
+                    }
+                }
+            except ValidationError as e:
+                print("ValidationError:", e.detail)
+                raise
+            except Exception as e:
+                print("Unexpected error:", str(e))
+                raise ValidationError({"execution": str(e)})
+        else:
+            raise ValidationError({"code": "Неизвестный тип кода"})
+
+        try:
+            exec(code_obj.code, execution_globals)
+            code_obj.output = "Код выполнен успешно"
+            code_obj.error = None
+        except Exception as e:
+            code_obj.error = f"Ошибка выполнения: {str(e)}"
+            code_obj.output = None
+            code_obj.save()
+            raise ValidationError({"execution": str(e)})
+
+        code_obj.save()
+        return Response({"status": "success", "output": code_obj.output})

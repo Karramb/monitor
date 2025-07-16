@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Box, Button, Chip, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Select, MenuItem, FormControl, InputLabel,
+  TableHead, TableRow, Select, MenuItem, FormControl, InputLabel,
   Typography, Card, CardContent, Fade, Grow, Avatar, Tooltip
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
@@ -89,8 +89,13 @@ function BacklogPage() {
   };
 
   const filteredTasks = tasks.filter(task => {
+    // Если статус не выбран, скрываем выполненные задачи по умолчанию
+    const statusFilter = selectedStatus ? 
+      task.status === selectedStatus : 
+      task.status !== 'Done';
+    
     return (
-      (!selectedStatus || task.status === selectedStatus) &&
+      statusFilter &&
       (!selectedGroup || task.groups === selectedGroup) &&
       (!selectedTag || task.tags.includes(selectedTag))
     );
@@ -101,12 +106,13 @@ function BacklogPage() {
   };
 
   const getStatusStats = () => {
+    const allTasks = tasks; // Все задачи для подсчета общей статистики
     const stats = {
       total: filteredTasks.length,
       create: filteredTasks.filter(t => t.status === 'Create').length,
       accepted: filteredTasks.filter(t => t.status === 'Accepted').length,
       in_test: filteredTasks.filter(t => t.status === 'In_test').length,
-      done: filteredTasks.filter(t => t.status === 'Done').length
+      done: allTasks.filter(t => t.status === 'Done').length // Всегда показываем общее количество выполненных
     };
     return stats;
   };
@@ -127,19 +133,19 @@ function BacklogPage() {
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
           borderRadius: 3
         }}>
-          <CardContent sx={{ p: 3 }}>
+          <CardContent sx={{ p: 2.5 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Avatar sx={{ 
                   bgcolor: '#1976d2', 
-                  width: 48, 
-                  height: 48,
+                  width: 40, 
+                  height: 40,
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                 }}>
                   <AssignmentIcon />
                 </Avatar>
                 <Box>
-                  <Typography variant="h4" sx={{ 
+                  <Typography variant="h5" sx={{ 
                     fontWeight: 700, 
                     color: '#1a1a1a',
                     mb: 0.5
@@ -153,13 +159,13 @@ function BacklogPage() {
               </Box>
               <Button 
                 variant="contained" 
-                size="large"
+                size="medium"
                 startIcon={<AddIcon />}
                 onClick={handleCreateClick}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  px: 3,
-                  py: 1.5,
+                  px: 2.5,
+                  py: 1,
                   borderRadius: 2,
                   textTransform: 'none',
                   fontWeight: 600,
@@ -180,51 +186,51 @@ function BacklogPage() {
 
       {/* Stats Cards */}
       <Fade in timeout={1000}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
           <Card sx={{ 
             flex: 1, 
-            minWidth: 120,
+            minWidth: 100,
             background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
             borderRadius: 2,
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
           }}>
-            <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 700 }}>
+            <CardContent sx={{ textAlign: 'center', py: 1, px: 2 }}>
+              <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 700, fontSize: '1.1rem' }}>
                 {stats.total}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#1976d2' }}>
+              <Typography variant="body2" sx={{ color: '#1976d2', fontSize: '0.75rem' }}>
                 Всего
               </Typography>
             </CardContent>
           </Card>
           <Card sx={{ 
             flex: 1, 
-            minWidth: 120,
+            minWidth: 100,
             background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
             borderRadius: 2,
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
           }}>
-            <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <Typography variant="h6" sx={{ color: '#388e3c', fontWeight: 700 }}>
+            <CardContent sx={{ textAlign: 'center', py: 1, px: 2 }}>
+              <Typography variant="h6" sx={{ color: '#388e3c', fontWeight: 700, fontSize: '1.1rem' }}>
                 {stats.done}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#388e3c' }}>
+              <Typography variant="body2" sx={{ color: '#388e3c', fontSize: '0.75rem' }}>
                 Выполнено
               </Typography>
             </CardContent>
           </Card>
           <Card sx={{ 
             flex: 1, 
-            minWidth: 120,
+            minWidth: 100,
             background: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
             borderRadius: 2,
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
           }}>
-            <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <Typography variant="h6" sx={{ color: '#7b1fa2', fontWeight: 700 }}>
+            <CardContent sx={{ textAlign: 'center', py: 1, px: 2 }}>
+              <Typography variant="h6" sx={{ color: '#7b1fa2', fontWeight: 700, fontSize: '1.1rem' }}>
                 {stats.in_test}
               </Typography>
-              <Typography variant="body2" sx={{ color: '#7b1fa2' }}>
+              <Typography variant="body2" sx={{ color: '#7b1fa2', fontSize: '0.75rem' }}>
                 В тесте
               </Typography>
             </CardContent>
@@ -241,63 +247,65 @@ function BacklogPage() {
           borderRadius: 2,
           boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
         }}>
-          <CardContent sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <FilterIcon sx={{ color: '#666' }} />
-              <Typography variant="h6" sx={{ color: '#333', fontWeight: 600 }}>
-                Фильтры
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Статус</InputLabel>
-                <Select 
-                  value={selectedStatus} 
-                  label="Статус" 
-                  onChange={handleStatusChange}
-                  sx={{ borderRadius: 2 }}
-                >
-                  <MenuItem value="">Все</MenuItem>
-                  <MenuItem value="Create">Создана</MenuItem>
-                  <MenuItem value="In_test">В тесте</MenuItem>
-                  <MenuItem value="Accepted">Принята</MenuItem>
-                  <MenuItem value="Done">Выполнена</MenuItem>
-                </Select>
-              </FormControl>
+          <CardContent sx={{ p: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FilterIcon sx={{ color: '#666', fontSize: 20 }} />
+                <Typography variant="h6" sx={{ color: '#333', fontWeight: 600, fontSize: '1rem' }}>
+                  Фильтры
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', flex: 1 }}>
+                <FormControl size="small" sx={{ minWidth: 130 }}>
+                  <InputLabel>Статус</InputLabel>
+                  <Select 
+                    value={selectedStatus} 
+                    label="Статус" 
+                    onChange={handleStatusChange}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <MenuItem value="">Все (кроме выполненных)</MenuItem>
+                    <MenuItem value="Create">Создана</MenuItem>
+                    <MenuItem value="In_test">В тесте</MenuItem>
+                    <MenuItem value="Accepted">Принята</MenuItem>
+                    <MenuItem value="Done">Выполнена</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Группа</InputLabel>
-                <Select 
-                  value={selectedGroup} 
-                  label="Группа" 
-                  onChange={handleGroupChange}
-                  sx={{ borderRadius: 2 }}
-                >
-                  <MenuItem value="">Все</MenuItem>
-                  {groups.map(group => (
-                    <MenuItem key={group.id} value={group.id}>
-                      {group.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                <FormControl size="small" sx={{ minWidth: 130 }}>
+                  <InputLabel>Группа</InputLabel>
+                  <Select 
+                    value={selectedGroup} 
+                    label="Группа" 
+                    onChange={handleGroupChange}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <MenuItem value="">Все</MenuItem>
+                    {groups.map(group => (
+                      <MenuItem key={group.id} value={group.id}>
+                        {group.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Тег</InputLabel>
-                <Select 
-                  value={selectedTag} 
-                  label="Тег" 
-                  onChange={handleTagChange}
-                  sx={{ borderRadius: 2 }}
-                >
-                  <MenuItem value="">Все</MenuItem>
-                  {tags.map(tag => (
-                    <MenuItem key={tag.id} value={tag.id}>
-                      {tag.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                <FormControl size="small" sx={{ minWidth: 130 }}>
+                  <InputLabel>Тег</InputLabel>
+                  <Select 
+                    value={selectedTag} 
+                    label="Тег" 
+                    onChange={handleTagChange}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <MenuItem value="">Все</MenuItem>
+                    {tags.map(tag => (
+                      <MenuItem key={tag.id} value={tag.id}>
+                        {tag.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
           </CardContent>
         </Card>
