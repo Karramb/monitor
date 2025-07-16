@@ -157,7 +157,7 @@ class SSHHostDetailAPIView(generics.RetrieveAPIView):
 
 class GitlabWebhookView(APIView):
     authentication_classes = []
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         object_attributes = request.data.get('object_attributes', {})
