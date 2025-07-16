@@ -18,7 +18,7 @@ class SSHHost(models.Model):
     last_commit = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ('id',)
+        ordering = ('host',)
         verbose_name = 'сервер'
         verbose_name_plural = 'Серверы'
 
