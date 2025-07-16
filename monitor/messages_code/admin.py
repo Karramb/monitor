@@ -8,8 +8,6 @@ class MessagesCodeAdmin(admin.ModelAdmin):
     list_display = (
         'name',
         'user',
-        'code',
-        'variables',
         'output',
         'error',
         'created_at',

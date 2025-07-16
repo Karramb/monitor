@@ -169,7 +169,8 @@ class GitlabWebhookView(APIView):
         try:
             commit_time = datetime.strptime(commit_time, '%Y-%m-%d %H:%M:%S %Z')
         except (ValueError, TypeError) as e:
-            return Response({'status': 'received (invalid date format)'})
+            return Response({'status': 'received (invalid date format)',
+                             'error': e})
 
         SSHHost.objects.all().update(
             last_commit=commit_time,
@@ -227,7 +228,7 @@ class MessagesCodeViewSet(viewsets.ModelViewSet):
         return MessagesCodeSerializer
 
     def get_queryset(self):
-        logger.info(f"Getting queryset for user: {self.request.user}")
+        logger.debug(f"Getting queryset for user: {self.request.user}")
         if self.request.user.is_authenticated:
             return MessagesCode.objects.filter(user=self.request.user)
         logger.warning("Anonymous user access attempt")
