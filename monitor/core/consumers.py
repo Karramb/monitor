@@ -324,7 +324,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 # 3. Docker compose up
                 logger.debug("Docker compose up.")
                 docker_compose_file = ssh_host.docker_base              
-                result = await conn.run(f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d', check=False)
+                result = await conn.run(f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d --build', check=False)
                 if result.exit_status != 0:
                     raise Exception(f"Docker compose up failed: {result.stderr or 'Unknown error'}")
                 
