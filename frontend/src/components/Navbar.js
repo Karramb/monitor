@@ -24,6 +24,14 @@ const Navbar = () => {
         }}>
           Server Monitor
         </Typography>
+        <Button 
+          color="inherit" 
+          component={Link} 
+          to="/ident-check"
+          sx={{ mr: 1 }}
+        >
+          Проверка по ident
+        </Button>
         
         {isAuthenticated ? (
           <>
