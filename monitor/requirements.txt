@@ -10,6 +10,7 @@ djoser==2.3.1
 docker==7.1.0
 Pillow==11.2.1
 pydantic-settings==2.10.1
+pymongo==4.15.3
 python-dotenv==1.1.0
 psycopg2-binary==2.9.10
 rabbitmq==0.2.0
