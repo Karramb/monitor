@@ -545,7 +545,7 @@ class CheckIdent(APIView):
         """Поиск в Redis"""
         try:
             # Подключение к Redis
-            redis_url = os.getenv('REDIS_URL', 'redis://172.20.0.124:6379/0')
+            redis_url = os.getenv('REDIS_URL')
             r = redis.from_url(redis_url, decode_responses=True)
 
             # Проверяем оба варианта ключей (приоритет у last_message)
