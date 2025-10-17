@@ -500,7 +500,7 @@ function IdentCheckPage() {
                 {/* Данные из Redis */}
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" gutterBottom color="error">
-                    Кэш Redis - пока не работает
+                    Кэш Redis
                   </Typography>
                   {renderDataSection(
                     'Redis', 

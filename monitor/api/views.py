@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import psycopg2
+import redis
 import requests
 import time
 from datetime import datetime, timedelta
@@ -355,6 +356,7 @@ class CheckIdent(APIView):
             logs = self.query_loki_logs(ident, protocol, start_time, end_time)
             mongo_data = self.query_mongodb(ident, start_time, end_time)
             postgres_data = self.query_postgresql(ident)
+            redis_data = self.query_redis(ident)
 
             return Response({
                 'success': True,
@@ -364,7 +366,8 @@ class CheckIdent(APIView):
                 'logs': logs['protocol'],
                 'consumer_data': logs['consumer'],
                 'mongo_data': mongo_data,
-                'postgres_data': postgres_data
+                'postgres_data': postgres_data,
+                'redis_data': redis_data
             })
         except Exception as e:
             return Response({
@@ -534,6 +537,56 @@ class CheckIdent(APIView):
 
         except Exception as e:
             print(f"Ошибка PostgreSQL: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def query_redis(self, ident):
+        """Поиск в Redis"""
+        try:
+            # Подключение к Redis
+            redis_url = os.getenv('REDIS_URL', 'redis://172.20.0.124:6379/0')
+            r = redis.from_url(redis_url, decode_responses=True)
+
+            # Проверяем оба варианта ключей (приоритет у last_message)
+            keys_to_check = [
+                f'last_message_{ident}',
+                ident
+            ]
+
+            data_dict = None
+            found_key = None
+
+            for key in keys_to_check:
+                data = r.get(key)
+                if data:
+                    found_key = key
+                    data_dict = json.loads(data)
+                    break
+
+            if not data_dict:
+                print(f"Redis: данные для {ident} не найдены")
+                return []
+
+            print(f"Redis: найдены данные по ключу {found_key}")
+
+            # Конвертируем timestamp в читаемый формат
+            readable_date = None
+            if 'timestamp' in data_dict and isinstance(data_dict['timestamp'], (int, float)):
+                timestamp_dt = datetime.fromtimestamp(data_dict['timestamp'])
+                readable_date = timestamp_dt.strftime('%Y-%m-%d %H:%M:%S')
+
+            return [{
+                'data': data_dict,
+                'timestamp_readable': readable_date or 'Нет данных о времени',
+                'redis_key': found_key
+            }]
+
+        except redis.ConnectionError as e:
+            print(f"Ошибка подключения к Redis: {e}")
+            return []
+        except Exception as e:
+            print(f"Ошибка Redis: {str(e)}")
             import traceback
             traceback.print_exc()
             return []
