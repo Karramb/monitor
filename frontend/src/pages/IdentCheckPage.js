@@ -37,7 +37,7 @@ function IdentCheckPage() {
     { value: 'wialon-ips', label: 'Wialon IPS' },
     { value: 'navtelecom', label: 'Navtelecom' },
     { value: 'teltonika', label: 'Teltonika' },
-    { value: 'neomatica-adm', label: 'Neomatica ADM' }
+    { value: 'adm', label: 'Neomatica ADM' }
   ];
 
   const timeRanges = [
