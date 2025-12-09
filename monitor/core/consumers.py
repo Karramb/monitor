@@ -290,58 +290,76 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
+                
                 await self.send(json.dumps({
                     'action': 'pull_with_reload_started',
                     'message': 'Пуллим код и перезагружаемся'
                 }))
 
-                # 1. Git pull
-                logger.debug("Git pull.")
-                result = await conn.run('cd /home/jsand/common && git pull origin main', check=False)
-                if result.exit_status != 0:
-                    raise Exception(f"Git pull failed: {result.stderr or 'Unknown error'}")
-                
-                if result.exit_status != 0:
-                    await self.send(json.dumps({
-                        'action': 'pull_with_reload_failed',
-                        'error': result.stderr or "Pull with reload failed"
-                    }))
-                    return
-                
-                # 2. Deploy remote
-                logger.debug("Deploy remote.")
-                result = await conn.run('sudo /usr/local/bin/deploy_remote', check=False)
-                if result.exit_status != 0:
-                    raise Exception(f"Deploy remote failed: {result.stderr or 'Unknown error'}")
-                
-                if result.exit_status != 0:
-                    await self.send(json.dumps({
-                        'action': 'pull_with_reload_failed',
-                        'error': result.stderr or "Pull with reload failed"
-                    }))
-                    return
-                
+                # Вспомогательная функция (исправлена логика и синтаксис)
+                async def run_command_or_fail(command, step_name):
+                    logger.debug(f"{step_name}...")
+
+                    result = await conn.run(command, check=False, input=password)
+
+                    if result.exit_status != 0:
+                        error_msg = result.stderr or f"{step_name} failed with unknown error"
+                        logger.error(f"{step_name} error: {error_msg}")
+
+                        # 1. Сначала отправляем сообщение на фронт
+                        await self.send(json.dumps({
+                            'action': 'pull_with_reload_failed',
+                            'error': error_msg
+                        }))
+
+                        # 2. Затем прерываем выполнение
+                        raise Exception(f"{step_name} failed: {error_msg}")
+
+                    return result
+
+                # 0. Скачиваем информацию о ветках (не меняя файлы)
+                await run_command_or_fail(
+                    'cd /home/jsand/common && git fetch origin', 
+                    "Git fetch"
+                )
+
+                # 1. Жесткий сброс на origin/main
+                # Это решает проблему "detached HEAD" и отсутствия upstream, которую вы видели в логах.
+                # Флаг -B создаст ветку main, если её нет, или сбросит её на состояние origin/main.
+                await run_command_or_fail(
+                    'cd /home/jsand/common && git checkout -B main origin/main', 
+                    "Git force checkout main"
+                )
+
+                # 2. Deploy remote script
+                await run_command_or_fail(
+                    'sudo /usr/local/bin/deploy_remote', 
+                    "Deploy remote"
+                )
+
                 # 3. Docker compose up
-                logger.debug("Docker compose up.")
                 docker_compose_file = ssh_host.docker_base              
-                result = await conn.run(f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d --build', check=False)
-                if result.exit_status != 0:
-                    raise Exception(f"Docker compose up failed: {result.stderr or 'Unknown error'}")
-                
-                if result.exit_status != 0:
-                    await self.send(json.dumps({
-                        'action': 'pull_with_reload_failed',
-                        'error': result.stderr or "Pull with reload failed"
-                    }))
-                    
+                result = await run_command_or_fail(
+                    f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d --build', 
+                    "Docker compose up"
+                )
+
+                # Success: Отправляем результат
                 await self.send(json.dumps({
                     'action': 'pull_with_reload_completed',
                     'result': result.stdout
                 }))
+
+                # Обновляем время в базе
                 ssh_host.last_update = timezone.now()
                 await sync_to_async(ssh_host.save)()
+
                 logger.debug("pull_with_reload completed successfully.")
                 return "All operations completed successfully"
 
         except Exception as e:
-            raise Exception(f"Pool with reload error: {str(e)}")
+            # Логируем стек трейс для админа
+            logger.exception("Error in pull_with_reload")
+            # Выбрасываем исключение наверх (клиент уже получил JSON с ошибкой внутри run_command_or_fail, 
+            # но если ошибка произошла в другом месте, это страховка)
+            raise Exception(f"Pull with reload error: {str(e)}")
