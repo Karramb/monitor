@@ -273,12 +273,11 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 ssh_host.last_update = timezone.now()
                 await sync_to_async(ssh_host.save)()
 
-                if result.exit_status != 0:
-                    raise Exception(result.stderr or "Fast pull failed")
-                return result.stdout
-
         except Exception as e:
-            raise Exception(f"Fast pool error: {str(e)}")
+            await self.send(json.dumps({
+                'action': 'fast_pull_failed',
+                'error': f"Fast pull error: {str(e)}"
+            }))
 
     async def pull_with_reload(self, ssh_host, username, password):
         try:
@@ -296,7 +295,6 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     'message': 'Пуллим код и перезагружаемся'
                 }))
 
-                # Вспомогательная функция (исправлена логика и синтаксис)
                 async def run_command_or_fail(command, step_name):
                     logger.debug(f"{step_name}...")
 
@@ -324,7 +322,6 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 )
 
                 # 1. Жесткий сброс на origin/main
-                # Это решает проблему "detached HEAD" и отсутствия upstream, которую вы видели в логах.
                 # Флаг -B создаст ветку main, если её нет, или сбросит её на состояние origin/main.
                 await run_command_or_fail(
                     'cd /home/jsand/common && git checkout -B main origin/main', 
@@ -340,7 +337,7 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 # 3. Docker compose up
                 docker_compose_file = ssh_host.docker_base              
                 result = await run_command_or_fail(
-                    f'cd /home/jsand/common && docker-compose -f {docker_compose_file} up -d --build', 
+                    f'cd /home/jsand/common && docker compose -f {docker_compose_file} up -d --build --force-recreate', 
                     "Docker compose up"
                 )
 
@@ -358,8 +355,5 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 return "All operations completed successfully"
 
         except Exception as e:
-            # Логируем стек трейс для админа
             logger.exception("Error in pull_with_reload")
-            # Выбрасываем исключение наверх (клиент уже получил JSON с ошибкой внутри run_command_or_fail, 
-            # но если ошибка произошла в другом месте, это страховка)
             raise Exception(f"Pull with reload error: {str(e)}")
