@@ -28,11 +28,11 @@ class MonitorConsumer(AsyncWebsocketConsumer):
 
         ssh_host = await self.get_ssh_host()
         if ssh_host is None:
-            await self.send(json.dumps({'error': 'SSH host not found'}))
+            if self.is_running:
+                await self.send(json.dumps({'error': 'SSH host not found'}))
             await self.close()
             return
 
-        # Запускаем мониторинг в отдельной задаче
         self.task = asyncio.create_task(self.monitor_loop(ssh_host))
 
     async def disconnect(self, close_code):
@@ -53,6 +53,8 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                     username=os.getenv('SSH_USERNAME'),
                     password=os.getenv('SSH_PASSWORD')
                 )
+                if not self.is_running:
+                    break
                 await self.send(json.dumps({
                     'config_status': result['config_status'],
                     'last_update': ssh_host.last_update.isoformat() if ssh_host.last_update else None,
@@ -62,12 +64,13 @@ class MonitorConsumer(AsyncWebsocketConsumer):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                await self.send(json.dumps({'error': f'Internal error: {str(e)}'}))
+                if self.is_running:
+                    await self.send(json.dumps({'error': f'Internal error: {str(e)}'}))
                 print("❌ Exception in monitor_loop:")
                 traceback.print_exc()
-
             try:
-                await asyncio.sleep(5)  # обновлять каждые 5 секунд
+                if self.is_running:
+                    await asyncio.sleep(5)
             except asyncio.CancelledError:
                 break
 
@@ -87,38 +90,31 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
-                # Получаем только информацию о конфигурации
                 compose_ls = await conn.run('docker compose ls --format json', check=False)
-
                 if compose_ls.stderr:
                     return {
                         'error': f"Ошибка при получении списка проектов: {compose_ls.stderr}",
                         'current_config': None,
                         'config_status': None
                     }
-
                 try:
                     projects = json.loads(compose_ls.stdout)
                     common_project = next((p for p in projects if p['Name'] == 'common'), None)
-
                     if not common_project:
                         return {
                             'current_config': None,
                             'config_status': "Проект common не найден"
                         }
-
                     return {
                         'current_config': common_project['ConfigFiles'],
                         'config_status': self.check_configuration(common_project['ConfigFiles'], ssh_host)
                     }
-
                 except json.JSONDecodeError:
                     return {
                         'error': "Не удалось разобрать вывод docker compose",
                         'current_config': None,
                         'config_status': None
                     }
-
         except Exception as e:
             return {
                 'error': f"Ошибка подключения: {str(e)}",
@@ -130,47 +126,30 @@ class MonitorConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         ssh_host = await self.get_ssh_host()
         if ssh_host is None:
-            await self.send(json.dumps({'error': 'SSH host not found'}))
+            if self.is_running:
+                await self.send(json.dumps({'error': 'SSH host not found'}))
             return
 
         try:
             if data.get('action') == 'toggle_mongo':
-                await self.toggle_mongo(
-                    ssh_host,
-                    username=os.getenv('SSH_USERNAME'),
-                    password=os.getenv('SSH_PASSWORD')
-                )
+                await self.toggle_mongo(ssh_host, username=os.getenv('SSH_USERNAME'), password=os.getenv('SSH_PASSWORD'))
             elif data.get('action') == 'restore_backup':
-                await self.restore_backup(
-                    ssh_host,
-                    username=os.getenv('SSH_USERNAME'),
-                    password=os.getenv('SSH_PASSWORD')
-                )
+                await self.restore_backup(ssh_host, username=os.getenv('SSH_USERNAME'), password=os.getenv('SSH_PASSWORD'))
             elif data.get('action') == 'fast_pull':
-                await self.fast_pull(
-                    ssh_host,
-                    username=os.getenv('SSH_USERNAME'),
-                    password=os.getenv('SSH_PASSWORD')
-                )
+                await self.fast_pull(ssh_host, username=os.getenv('SSH_USERNAME'), password=os.getenv('SSH_PASSWORD'))
             elif data.get('action') == 'pull_with_reload':
-                await self.pull_with_reload(
-                    ssh_host,
-                    username=os.getenv('SSH_USERNAME'),
-                    password=os.getenv('SSH_PASSWORD')
-                )
+                await self.pull_with_reload(ssh_host, username=os.getenv('SSH_USERNAME'), password=os.getenv('SSH_PASSWORD'))
         except Exception as e:
-            print(f"Error in receive: {str(e)}")
+            if self.is_running:
+                print(f"Error in receive: {str(e)}")
 
     def check_configuration(self, config_files, ssh_host):
         if not config_files:
             return "Конфигурация не определена"
-
         for config_file in config_files.split(','):
             filename = os.path.basename(config_file.strip())
-
             if ssh_host.docker_base and ssh_host.docker_base == filename:
                 return "Подключена тестовая Монго"
-
             if ssh_host.docker_prod and ssh_host.docker_prod == filename:
                 return "Подключена продакшн Монго"
         return f"Используется другая конфигурация: {os.path.basename(config_files.split(',')[0].strip())}"
@@ -185,26 +164,30 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'toggle_started',
                     'message': 'Переключаем базу'
                 }))
-
                 result = await conn.run('sudo /usr/local/bin/toggle-mongo', check=False)
-
                 if result.exit_status != 0:
+                    if not self.is_running:
+                        return
                     await self.send(json.dumps({
                         'action': 'toggle_failed',
                         'error': result.stderr or "Toggle failed"
                     }))
                     return
-
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'toggle_completed',
                     'result': result.stdout
                 }))
-
         except Exception as e:
+            if not self.is_running:
+                return
             await self.send(json.dumps({
                 'action': 'toggle_failed',
                 'error': f"Ошибка подключения: {str(e)}"
@@ -221,26 +204,36 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 connect_timeout=10
             ) as conn:
                 logger.debug("Соединение установлено. Начинаем восстановление дампа.")
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'restore_started',
                     'message': 'Начато восстановление дампа PG'
                 }))
-
                 logger.debug("Выполняем restore-backup.")
                 result = await conn.run('sudo /usr/local/bin/restore-backup', check=False)
-                
-
                 if result.exit_status != 0:
-                    raise Exception(result.stderr or "Restore failed")
-
+                    if not self.is_running:
+                        return
+                    await self.send(json.dumps({
+                        'action': 'restore_failed',
+                        'error': result.stderr or "Restore failed"
+                    }))
+                    return
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'restore_completed',
                     'result': result.stdout
                 }))
                 logger.debug("Успех restore-backup.")
-
         except Exception as e:
-            raise Exception(f"Restore backup error: {str(e)}")
+            if not self.is_running:
+                return
+            await self.send(json.dumps({
+                'action': 'restore_failed',
+                'error': f"Restore backup error: {str(e)}"
+            }))
 
     async def fast_pull(self, ssh_host, username, password):
         try:
@@ -252,28 +245,32 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'fast_pull_started',
                     'message': 'Пуллим код'
                 }))
-
                 result = await conn.run('cd /home/jsand/common && git pull origin main', check=False)
-
                 if result.exit_status != 0:
+                    if not self.is_running:
+                        return
                     await self.send(json.dumps({
                         'action': 'fast_pull_failed',
                         'error': result.stderr or "Fast pull failed"
                     }))
                     return
-                
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'fast_pull_completed',
                     'result': result.stdout
                 }))
                 ssh_host.last_update = timezone.now()
                 await sync_to_async(ssh_host.save)()
-
         except Exception as e:
+            if not self.is_running:
+                return
             await self.send(json.dumps({
                 'action': 'fast_pull_failed',
                 'error': f"Fast pull error: {str(e)}"
@@ -289,7 +286,8 @@ class MonitorConsumer(AsyncWebsocketConsumer):
                 known_hosts=None,
                 connect_timeout=10
             ) as conn:
-                
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'pull_with_reload_started',
                     'message': 'Пуллим код и перезагружаемся'
@@ -297,63 +295,35 @@ class MonitorConsumer(AsyncWebsocketConsumer):
 
                 async def run_command_or_fail(command, step_name):
                     logger.debug(f"{step_name}...")
-
                     result = await conn.run(command, check=False, input=password)
-
                     if result.exit_status != 0:
                         error_msg = result.stderr or f"{step_name} failed with unknown error"
                         logger.error(f"{step_name} error: {error_msg}")
-
-                        # 1. Сначала отправляем сообщение на фронт
-                        await self.send(json.dumps({
-                            'action': 'pull_with_reload_failed',
-                            'error': error_msg
-                        }))
-
-                        # 2. Затем прерываем выполнение
+                        if self.is_running:
+                            await self.send(json.dumps({
+                                'action': 'pull_with_reload_failed',
+                                'error': error_msg
+                            }))
                         raise Exception(f"{step_name} failed: {error_msg}")
-
                     return result
 
-                # 0. Скачиваем информацию о ветках (не меняя файлы)
-                await run_command_or_fail(
-                    'cd /home/jsand/common && git fetch origin', 
-                    "Git fetch"
-                )
+                await run_command_or_fail('cd /home/jsand/common && git fetch origin', "Git fetch")
+                await run_command_or_fail('cd /home/jsand/common && git checkout -B main origin/main', "Git force checkout main")
+                await run_command_or_fail('sudo /usr/local/bin/deploy_remote', "Deploy remote")
+                docker_compose_file = ssh_host.docker_base
+                result = await run_command_or_fail(f'cd /home/jsand/common && docker compose -f {docker_compose_file} up -d --build --force-recreate', "Docker compose up")
 
-                # 1. Жесткий сброс на origin/main
-                # Флаг -B создаст ветку main, если её нет, или сбросит её на состояние origin/main.
-                await run_command_or_fail(
-                    'cd /home/jsand/common && git checkout -B main origin/main', 
-                    "Git force checkout main"
-                )
-
-                # 2. Deploy remote script
-                await run_command_or_fail(
-                    'sudo /usr/local/bin/deploy_remote', 
-                    "Deploy remote"
-                )
-
-                # 3. Docker compose up
-                docker_compose_file = ssh_host.docker_base              
-                result = await run_command_or_fail(
-                    f'cd /home/jsand/common && docker compose -f {docker_compose_file} up -d --build --force-recreate', 
-                    "Docker compose up"
-                )
-
-                # Success: Отправляем результат
+                if not self.is_running:
+                    return
                 await self.send(json.dumps({
                     'action': 'pull_with_reload_completed',
                     'result': result.stdout
                 }))
-
-                # Обновляем время в базе
                 ssh_host.last_update = timezone.now()
                 await sync_to_async(ssh_host.save)()
-
                 logger.debug("pull_with_reload completed successfully.")
                 return "All operations completed successfully"
-
         except Exception as e:
-            logger.exception("Error in pull_with_reload")
+            if self.is_running:
+                logger.exception("Error in pull_with_reload")
             raise Exception(f"Pull with reload error: {str(e)}")
