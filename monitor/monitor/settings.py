@@ -72,7 +72,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('redis', 6379)],
+            "hosts": [(os.getenv('REDIS_LOCAL', '127.0.0.1'), 6379)],
         },
     },
 }
@@ -156,7 +156,12 @@ LOGGING = {
             'handlers': ['std'],
             'level': os.getenv('LOG_LEVEL'),
             'propagate': False,
-        }
+        },
+        'asyncssh': {
+            'handlers': ['std'],      # или [] если вообще не нужно
+            'level': 'WARNING',       # подними уровень, чтобы INFO не было
+            'propagate': False,       # чтобы не уходило в root
+        },
     }
 }
 
